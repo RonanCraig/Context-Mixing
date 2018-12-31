@@ -1,6 +1,6 @@
 #pragma once
 #include <fstream>
-#include "ProbRange.h"
+#include "ProbabilityModel.h"
 
 namespace compression
 {

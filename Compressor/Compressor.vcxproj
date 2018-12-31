@@ -118,14 +118,14 @@
   <ItemGroup>
     <ClCompile Include="Compressor.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PPM.cpp" />
+    <ClCompile Include="ProbabilityModel.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ArithmeticEncoder.h" />
     <ClInclude Include="Compressor.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CompressionLib\CompressionLib.vcxproj">
-      <Project>{51cb5b05-2817-4b9e-8c8e-0b0b8ddb266a}</Project>
-    </ProjectReference>
+    <ClInclude Include="PPM.h" />
+    <ClInclude Include="ProbabilityModel.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
