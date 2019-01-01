@@ -20,13 +20,13 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{055AFB80-47DD-4F13-8AB8-8EE810D2857B}</ProjectGuid>
-    <RootNamespace>Compressor</RootNamespace>
+    <ProjectGuid>{67BD285A-2104-4985-BD34-CDDCCD000800}</ProjectGuid>
+    <RootNamespace>CompressionLib</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -76,11 +76,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../CompressionLib; C:\Program Files (x86)\boost_1_69_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\boost_1_69_0</AdditionalIncludeDirectories>
     </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\boost_1_69_0\stage\lib</AdditionalLibraryDirectories>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -119,12 +116,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClInclude Include="ArithmeticDecoder.h" />
+    <ClInclude Include="ArithmeticEncoder.h" />
+    <ClInclude Include="Compressor.h" />
+    <ClInclude Include="Decompressor.h" />
+    <ClInclude Include="PPM.h" />
+    <ClInclude Include="ProbabilityModel.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CompressionLib\CompressionLib.vcxproj">
-      <Project>{67bd285a-2104-4985-bd34-cddccd000800}</Project>
-    </ProjectReference>
+    <ClCompile Include="Compressor.cpp" />
+    <ClCompile Include="Decompressor.cpp" />
+    <ClCompile Include="PPM.cpp" />
+    <ClCompile Include="ProbabilityModel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

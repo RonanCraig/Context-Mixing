@@ -2,6 +2,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include "ProbabilityModel.h"
 
 namespace compression
 {
@@ -12,10 +13,9 @@ private:
 	unsigned int upperBound = 0xFFFFFFFFU;
 	unsigned int lowerBound = 0;
 	unsigned int value = 0;
-	std::string fullCode;
-	std::ofstream& outputFileStream;
+	std::ifstream& inputFileStream;
 public:
-	ArithmeticDecoder(std::string fullCode, std::ofstream& outputFileStream) : fullCode(fullCode), outputFileStream(outputFileStream)
+	ArithmeticDecoder(std::ifstream& inputFileStream) : inputFileStream(inputFileStream)
 	{
 		for (int i = 0; i < 32; i++)
 		{
@@ -24,26 +24,18 @@ public:
 		}
 	}
 
-	bool decode(const std::map<char, float>& probabilities)
+	char decode(const ProbabilityModel::CharTable& charTable)
 	{
 		unsigned int range = upperBound - lowerBound;
-		upperBound = lowerBound;
-		char currentChar;
-		for (auto it = probabilities.begin(); it != probabilities.end() && !(lowerBound <= value && upperBound > value); it++)
-		{
-			currentChar = it->first;
-			lowerBound = upperBound;
-			upperBound += (probabilities.at(currentChar) * range);
-		}
+		int count = ((value - lowerBound)/range)*(charTable.getTotalCount());
+		std::unique_ptr<ProbRange> probabilityRange = move(charTable.calculateRange(count));
+		lowerBound += (probabilityRange->lower / probabilityRange->denom) * range;
+		upperBound += (probabilityRange->upper / probabilityRange->denom) * range;
 
-		if (currentChar == '*')
-			return true;
-
-		outputFileStream << currentChar;
 		renormalizeCode();
-		return false;
+		return probabilityRange->character;
 	}
-
+private:
 	void renormalizeCode()
 	{
 		while (true)
@@ -69,15 +61,16 @@ public:
 		}
 	}
 
-	int getNextBit()
+	bool getNextBit()
 	{
-		int nextBit = 0;
-		if (fullCode.length() > 0)
+		char nextBit;
+		inputFileStream.get(nextBit);
+		if (!inputFileStream.eof())
 		{
-			nextBit = fullCode.at(0) - '0';
-			fullCode.erase(0, 1);
+			if (nextBit == '1')
+				return true;
 		}
-		return nextBit;
+		return false;
 	}
 };
 

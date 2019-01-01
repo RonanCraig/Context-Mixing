@@ -16,7 +16,7 @@ private:
 public:
 	ArithmeticEncoder(std::ofstream& outputFileStream) : outputFileStream(outputFileStream) {}
 
-	void encode(char charToEncode, std::unique_ptr<ProbRange> probRange)
+	void encode(std::unique_ptr<ProbRange> probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
 		lowerBound = (probRange->lower*range) / probRange->denom;
@@ -25,7 +25,7 @@ public:
 		renormalizeBounds();
 
 		// Character representing end of encoding.
-		if (charToEncode == '*')
+		if (probRange->character == ProbabilityModel::EndCharacter)
 		{
 			pending_bits++;
 			if (lowerBound < 0x40000000)
@@ -35,6 +35,7 @@ public:
 		}
 	}
 
+private:
 	void renormalizeBounds()
 	{
 		while (true)

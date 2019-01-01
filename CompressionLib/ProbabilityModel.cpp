@@ -13,20 +13,6 @@ ProbabilityModel::CharTable& ProbabilityModel::getCharTable(const string* contex
 	return contextTable[*context]; // Retrieves the CharTable for the given context.
 }
 		
-
-bool ProbabilityModel::increaseSymbolCount(const char& c, const std::string* context)
-{
-	CharTable& table = getCharTable(context);
-	return table.increaseSymbolCount(c);
-}
-
-std::unique_ptr<ProbRange> ProbabilityModel::getRange(const char& c, const std::string* context)
-{
-	CharTable& table = getCharTable(context);
-	unique_ptr<ProbRange> range = move(table.calculateRange(c));
-	return range;
-}
-
 bool ProbabilityModel::CharTable::increaseSymbolCount(const char& c)
 {
 	// If the char has not been seen it will be added with a count of 1.
@@ -50,20 +36,14 @@ bool ProbabilityModel::CharTable::increaseSymbolCount(const char& c)
 	return !result.second;
 }
 
-unique_ptr<ProbRange> ProbabilityModel::CharTable::calculateRange(const char& c)
+unique_ptr<ProbRange> ProbabilityModel::CharTable::calculateRange(const char& c) const
 {
 	// Calculates the probablilty range for the given character.
 	unique_ptr<ProbRange> probRange = make_unique<ProbRange>(ProbRange());
 	pair<int, int> CountandCumCount = charMap.at(c);
+	probRange->character = c;
 	probRange->denom = totalCount;
 	probRange->upper = CountandCumCount.second;
 	probRange->lower = CountandCumCount.second - CountandCumCount.first;
 	return probRange;
 }
-
-ProbabilityModel::CharTable::CharTable(bool isNegativeOrder)
-{
-	// All CharTables should have a escape character count of 1, except the negativeOrder table.
-	if (!isNegativeOrder)
-		increaseSymbolCount('&');
-};
