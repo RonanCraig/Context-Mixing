@@ -20,7 +20,6 @@ private:
 	void compress();
 	void createAlphabet();
 	void serializeProbabilityModel();
-
 };
 
 }

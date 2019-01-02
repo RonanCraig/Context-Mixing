@@ -1,4 +1,7 @@
 #include "ProbabilityModel.h"
+#ifdef _DEBUG
+#include <fstream>
+#endif
 
 using namespace std;
 using namespace compression;
@@ -12,6 +15,31 @@ ProbabilityModel::CharTable& ProbabilityModel::getCharTable(const string* contex
 	ContextTable& contextTable = orderTable[order]; // Retrieves the contextTable containing all contexts of the order length.
 	return contextTable[*context]; // Retrieves the CharTable for the given context.
 }
+
+#ifdef _DEBUG
+void ProbabilityModel::outputTables(const std::string& directory)
+{
+	ofstream debugOutputFileStream(directory + "\\debug", std::ios_base::app);
+	debugOutputFileStream << "\n\n" << "-1" << "\n" << "\t" << "\"\"";
+	for (auto charIt = orderNegativeOneTable.charMap.begin(); charIt != orderNegativeOneTable.charMap.end(); charIt++)
+	{
+		debugOutputFileStream << "\n" << "\t\t" << "'" << charIt->first << "'" << "\t" << charIt->second.first << "\t" << charIt->second.second;
+	}
+	for (auto orderIt = orderTable.begin(); orderIt != orderTable.end(); orderIt++)
+	{
+		debugOutputFileStream << "\n" << orderIt->first;
+		for (auto contextIt = orderIt->second.begin(); contextIt != orderIt->second.end(); contextIt++)
+		{
+			debugOutputFileStream << "\n" << "\t" << "\"" << contextIt->first << "\"";
+			CharTable charTable = contextIt->second;
+			for (auto charIt = charTable.charMap.begin(); charIt != charTable.charMap.end(); charIt++)
+			{	
+				debugOutputFileStream << "\n" << "\t\t" << "'" << charIt->first << "'" << "\t" << charIt->second.first << "\t" << charIt->second.second;
+			}
+		}
+	}
+}
+#endif
 		
 bool ProbabilityModel::CharTable::increaseSymbolCount(const char& c)
 {
@@ -45,5 +73,18 @@ unique_ptr<ProbRange> ProbabilityModel::CharTable::calculateRange(const char& c)
 	probRange->denom = totalCount;
 	probRange->upper = CountandCumCount.second;
 	probRange->lower = CountandCumCount.second - CountandCumCount.first;
+	return probRange;
+}
+
+unique_ptr<ProbRange> ProbabilityModel::CharTable::calculateRange(const int& count) const
+{
+	// First finds which character the count belongs to.
+	char c;
+	for (auto it = charMap.begin(); it != charMap.end(); it++)
+	{
+		if (count < it->second.second)
+			c = it->first;
+	}
+	unique_ptr<ProbRange> probRange = move(calculateRange(c));
 	return probRange;
 }

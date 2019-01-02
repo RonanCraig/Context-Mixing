@@ -11,11 +11,39 @@ void Decompressor::decompress()
 	ifstream inputFileStream(directory + "\\code");
 	ArithmeticDecoder decoder(inputFileStream);
 
-	int order = ProbabilityModel::MaxOrderSize;
+	string buffer = "";
+	int order = 0;
 	bool endReached = false;
+	
 	while (!endReached)
 	{
+		ProbabilityModel::CharTable charTable;
+		if (order == -1)
+			charTable = model.getCharTable();
+		else
+		{
+			int end = buffer.length();
+			int start = end - order;
+			string context = buffer.substr(start,end);
+			charTable = model.getCharTable(&context);
+		}
 
+		char output = decoder.decode(charTable);
+
+		if (output == ProbabilityModel::EscapeCharacter)
+			order--;
+		else if (output == ProbabilityModel::EndCharacter)
+			endReached = true;
+		else
+		{
+			buffer.push_back(output);
+			outputFileStream << output;
+			int bufferSize = buffer.length();
+			if (bufferSize > ProbabilityModel::MaxOrderSize)
+				buffer.erase(0, 1);
+			order = bufferSize;
+		}
+		
 	}
 }
 

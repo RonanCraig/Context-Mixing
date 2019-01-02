@@ -43,6 +43,7 @@ public:
 private:
 	// Used for boost serialization
 	friend class boost::serialization::access;
+	friend class ProbabilityModel;
 	template<class Archive>
 	void serialize(Archive & ar, const unsigned int version) { ar & totalCount; ar & charMap; }
 };
@@ -62,6 +63,9 @@ private:
 //Methods
 public:
 	CharTable& getCharTable(const std::string* context = nullptr);
+	#ifdef _DEBUG
+		void outputTables(const std::string& directory);
+	#endif
 
 private:
 	// Used for boost serialization

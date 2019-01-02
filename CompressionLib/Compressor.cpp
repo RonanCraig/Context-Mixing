@@ -10,6 +10,9 @@ void Compressor::compress()
 {
 	ofstream outputFileStream(directory + "\\code");
 	ifstream inputFileStream(directory + "\\input");
+	#ifdef _DEBUG
+	ofstream debugOutputFileStream(directory + "\\debug");
+	#endif
 
 	ArithmeticEncoder encoder(outputFileStream);
 	PPM ppm(model, alphabet);
@@ -26,6 +29,9 @@ void Compressor::compress()
 		unique_ptr<ProbRanges> probRanges = ppm.getProbabilityRanges(c, buffer);
 		for (auto it = probRanges->begin(); it < probRanges->end(); it++)
 		{
+			#ifdef _DEBUG
+			debugOutputFileStream << (*it)->character;
+			#endif
 			// Arithmetic encoder encodes each probability range.
 			encoder.encode(move(*it));
 		}
@@ -43,7 +49,6 @@ void Compressor::createAlphabet()
 		uniqueChars.insert(c);
 	for (char c : uniqueChars)
 		alphabet += c;
-	alphabet += ProbabilityModel::EndCharacter;
 }
 
 void Compressor::serializeProbabilityModel()
@@ -59,4 +64,7 @@ Compressor::Compressor(const string& directory) : directory(directory)
 	createAlphabet();
 	compress();
 	serializeProbabilityModel();
+	#ifdef _DEBUG
+	model.outputTables(directory);
+	#endif
 }
