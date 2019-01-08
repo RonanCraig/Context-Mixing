@@ -29,7 +29,6 @@ protected:
 public:
 	const int& getTotalCount() const { return totalCount; }
 	void increaseSymbolCount(const char& c);
-	std::unique_ptr<ProbRange> calculateRange(const char& c);
 };
 
 }

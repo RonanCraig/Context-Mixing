@@ -15,8 +15,14 @@ void Compressor::compress()
 
 	// Main loop, compressing each character individually.
 	char c;
-	while (inputFileStream.get(c))
+	bool finished = false;
+	while (!finished)
 	{
+		if (!inputFileStream.get(c))
+		{
+			finished = true;
+			c = config::EndCharacter;
+		}
 		Model& model = contextMixer.getBestModel();
 		model.encode(c, encoder);
 	}

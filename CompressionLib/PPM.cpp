@@ -85,6 +85,7 @@ PPM::PPM()
 	char c;
 	while (inputFileStream.get(c))
 		uniqueChars.insert(c);
+	uniqueChars.insert(config::EndCharacter);
 	for (char c : uniqueChars)
 		orderNegativeOneTable.increaseSymbolCount(c);
 

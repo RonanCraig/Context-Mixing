@@ -22,18 +22,6 @@ void CharTable::increaseSymbolCount(const char& c)
 		itNext->second.second++;
 }
 
-unique_ptr<ProbRange> CharTable::calculateRange(const char& c)
-{
-	// Calculates the probablilty range for the given character.
-	unique_ptr<ProbRange> probRange = make_unique<ProbRange>(ProbRange());
-	pair<int, int> CountandCumCount = charMap.at(c);
-	probRange->character = c;
-	probRange->denom = totalCount;
-	probRange->upper = CountandCumCount.second;
-	probRange->lower = CountandCumCount.second - CountandCumCount.first;
-	return probRange;
-}
-
 /*
 pair<ProbabilityModel::CharTable::CharMap::iterator, bool> ProbabilityModel::CharTable::getCharMapIteratorAtChar(const char& c)
 {
