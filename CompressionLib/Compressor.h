@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 #include <string>
-#include "ProbabilityModel.h"
+#include "ContextMixer.h"
 
 namespace compression
 {
@@ -9,17 +9,14 @@ namespace compression
 class Compressor
 {
 private:
+	compression::ContextMixer contextMixer;
 	std::string directory;
-	std::string alphabet;
-	ProbabilityModel model;
 
 public:
 	Compressor(const std::string& directory);
 
 private:
 	void compress();
-	void createAlphabet();
-	void serializeProbabilityModel();
 };
 
 }

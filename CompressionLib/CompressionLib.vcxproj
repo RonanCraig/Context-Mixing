@@ -119,15 +119,19 @@
     <ClInclude Include="ArithmeticDecoder.h" />
     <ClInclude Include="ArithmeticEncoder.h" />
     <ClInclude Include="Compressor.h" />
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="ContextMixer.h" />
     <ClInclude Include="Decompressor.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="PPM.h" />
-    <ClInclude Include="ProbabilityModel.h" />
+    <ClInclude Include="CharTable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CharTable.cpp" />
     <ClCompile Include="Compressor.cpp" />
+    <ClCompile Include="ContextMixer.cpp" />
     <ClCompile Include="Decompressor.cpp" />
     <ClCompile Include="PPM.cpp" />
-    <ClCompile Include="ProbabilityModel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

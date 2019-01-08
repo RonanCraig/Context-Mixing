@@ -1,8 +1,7 @@
 #pragma once
 #include <fstream>
 #include <string>
-#include <boost/archive/binary_iarchive.hpp>
-#include "ProbabilityModel.h"
+#include "ContextMixer.h"
 
 namespace compression
 {
@@ -10,15 +9,14 @@ namespace compression
 class Decompressor
 {
 private:
+	compression::ContextMixer contextMixer;
 	std::string directory;
-	ProbabilityModel model;
 
 public:
 	Decompressor(const std::string& directory);
 
 private:
 	void decompress();
-	void deserializeProbabilityModel();
 
 };
 

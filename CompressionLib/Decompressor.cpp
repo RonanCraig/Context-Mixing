@@ -1,6 +1,7 @@
 #include "Decompressor.h"
 #include "ArithmeticDecoder.h"
-#include <deque>
+#include "Config.h"
+#include "Model.h"
 
 using namespace std;
 using namespace compression;
@@ -9,53 +10,18 @@ void Decompressor::decompress()
 {
 	ofstream outputFileStream(directory + "\\result");
 	ifstream inputFileStream(directory + "\\code");
-	ArithmeticDecoder decoder(inputFileStream);
+	ArithmeticDecoder decoder(inputFileStream, outputFileStream);
 
-	string buffer = "";
-	int order = 0;
-	bool endReached = false;
+	bool finished = false;
 	
-	while (!endReached)
+	while (!finished)
 	{
-		ProbabilityModel::CharTable charTable;
-		if (order == -1)
-			charTable = model.getCharTable();
-		else
-		{
-			int end = buffer.length();
-			int start = end - order;
-			string context = buffer.substr(start,end);
-			charTable = model.getCharTable(&context);
-		}
-
-		char output = decoder.decode(charTable);
-
-		if (output == ProbabilityModel::EscapeCharacter)
-			order--;
-		else if (output == ProbabilityModel::EndCharacter)
-			endReached = true;
-		else
-		{
-			buffer.push_back(output);
-			outputFileStream << output;
-			int bufferSize = buffer.length();
-			if (bufferSize > ProbabilityModel::MaxOrderSize)
-				buffer.erase(0, 1);
-			order = bufferSize;
-		}
-		
+		Model& model = contextMixer.getBestModel();
+		finished = model.decode(decoder);
 	}
-}
-
-void Decompressor::deserializeProbabilityModel()
-{
-	ifstream inputFileStream(directory + "\\model");
-	boost::archive::binary_iarchive inputArchive(inputFileStream);
-	inputArchive >> model;
 }
 
 Decompressor::Decompressor(const string& directory) : directory(directory)
 {
-	deserializeProbabilityModel();
 	decompress();
 }

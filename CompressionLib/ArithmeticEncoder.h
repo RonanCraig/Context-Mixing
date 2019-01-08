@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
-#include "ProbabilityModel.h"
+#include "Config.h"
+#include "CharTable.h"
 
 namespace compression
 {
@@ -19,13 +20,13 @@ public:
 	void encode(std::unique_ptr<ProbRange> probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		lowerBound = (probRange->lower*range) / probRange->denom;
-		upperBound = (probRange->upper*range) / probRange->denom;
+		upperBound = lowerBound + (probRange->upper * (range / probRange->denom));
+		lowerBound += probRange->lower * (range / probRange->denom);
 
 		renormalizeBounds();
 
 		// Character representing end of encoding.
-		if (probRange->character == ProbabilityModel::EndCharacter)
+		if (probRange->character == config::EndCharacter)
 		{
 			pending_bits++;
 			if (lowerBound < 0x40000000)

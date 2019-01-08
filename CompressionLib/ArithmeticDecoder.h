@@ -2,7 +2,7 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include "ProbabilityModel.h"
+#include "CharTable.h"
 
 namespace compression
 {
@@ -14,8 +14,9 @@ private:
 	unsigned int lowerBound = 0;
 	unsigned int value = 0;
 	std::ifstream& inputFileStream;
+	std::ofstream& outputFileStream;
 public:
-	ArithmeticDecoder(std::ifstream& inputFileStream) : inputFileStream(inputFileStream)
+	ArithmeticDecoder(std::ifstream& inputFileStream, std::ofstream& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
 	{
 		for (int i = 0; i < 32; i++)
 		{
@@ -24,16 +25,23 @@ public:
 		}
 	}
 
-	char decode(const ProbabilityModel::CharTable& charTable)
+	void decode(std::unique_ptr<ProbRange> probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		int count = ((value - lowerBound)/range)*(charTable.getTotalCount());
-		std::unique_ptr<ProbRange> probabilityRange = move(charTable.calculateRange(count));
-		lowerBound += (probabilityRange->lower / probabilityRange->denom) * range;
-		upperBound += (probabilityRange->upper / probabilityRange->denom) * range;
+		upperBound = lowerBound + (probRange->upper * (range / probRange->denom));
+		lowerBound += probRange->lower * (range / probRange->denom);
 
 		renormalizeCode();
-		return probabilityRange->character;
+		char& c = probRange->character;
+		if(c != config::EscapeCharacter && c != config::EndCharacter)
+			outputFileStream << probRange->character;
+	}
+
+	int getCount(const int& totalCount)
+	{
+		unsigned int range = upperBound - lowerBound;
+		int count = (value - lowerBound) / (range / totalCount);
+		return count;
 	}
 private:
 	void renormalizeCode()

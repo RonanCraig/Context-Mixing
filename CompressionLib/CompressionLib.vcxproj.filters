@@ -30,7 +30,16 @@
     <ClInclude Include="PPM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProbabilityModel.h">
+    <ClInclude Include="ContextMixer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CharTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,7 +53,10 @@
     <ClCompile Include="PPM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ProbabilityModel.cpp">
+    <ClCompile Include="ContextMixer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CharTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
