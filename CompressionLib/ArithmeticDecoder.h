@@ -25,7 +25,7 @@ public:
 		}
 	}
 
-	void decode(std::unique_ptr<ProbRange> probRange)
+	char decode(std::unique_ptr<ProbRange> probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
 		upperBound = lowerBound + (probRange->upper * (range / probRange->denom));
@@ -35,6 +35,7 @@ public:
 		char& c = probRange->character;
 		if(c != config::EscapeCharacter && c != config::EndCharacter)
 			outputFileStream << probRange->character;
+		return c;
 	}
 
 	int getCount(const int& totalCount)

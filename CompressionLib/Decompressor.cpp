@@ -12,12 +12,13 @@ void Decompressor::decompress()
 	ifstream inputFileStream(directory + "\\code");
 	ArithmeticDecoder decoder(inputFileStream, outputFileStream);
 
-	bool finished = false;
+	char decodedChar = ' ';
 	
-	while (!finished)
+	while (decodedChar != config::EndCharacter)
 	{
 		Model& model = contextMixer.getBestModel();
-		finished = model.decode(decoder);
+		decodedChar = model.decode(decoder);
+		contextMixer.updateModels(decodedChar);
 	}
 }
 

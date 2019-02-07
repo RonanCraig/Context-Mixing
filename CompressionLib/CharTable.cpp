@@ -22,6 +22,17 @@ void CharTable::increaseSymbolCount(const char& c)
 		itNext->second.second++;
 }
 
+#ifdef _DEBUG
+void CharTable::outputDebug(ofstream& outputFileStream)
+{
+	for (auto charIt = charMap.begin(); charIt != charMap.end(); charIt++)
+	{
+		outputFileStream << "\n" << "\t\t" << "'" << charIt->first << "'" << "\t" << charIt->second.first << "\t" << charIt->second.second;
+	}
+}
+#endif // DEBUG
+
+
 /*
 pair<ProbabilityModel::CharTable::CharMap::iterator, bool> ProbabilityModel::CharTable::getCharMapIteratorAtChar(const char& c)
 {

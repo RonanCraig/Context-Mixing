@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <fstream>
 
 namespace compression
 {
@@ -29,6 +30,10 @@ protected:
 public:
 	const int& getTotalCount() const { return totalCount; }
 	void increaseSymbolCount(const char& c);
+#ifdef _DEBUG
+	void outputDebug(std::ofstream& outputFileStream);
+#endif // _DEBUG
+
 };
 
 }

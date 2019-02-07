@@ -25,7 +25,17 @@ void Compressor::compress()
 		}
 		Model& model = contextMixer.getBestModel();
 		model.encode(c, encoder);
+		contextMixer.updateModels(c);
+
 	}
+
+#ifdef _DEBUG
+	outputFileStream.close();
+	outputFileStream.open(directory + "\\debug");
+	contextMixer.outputDebug(outputFileStream);
+#endif // _DEBUG
+
+
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)

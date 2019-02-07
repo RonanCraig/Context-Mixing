@@ -5,6 +5,8 @@
 using namespace std;
 using namespace compression;
 
+// TODO: Reduce duplicated code between encode, decode and update.
+
 void PPM::encode(const char& charToEncode, ArithmeticEncoder& encoder)
 {
 	bool contextFound = false;
@@ -19,15 +21,10 @@ void PPM::encode(const char& charToEncode, ArithmeticEncoder& encoder)
 		if (range->character == charToEncode)
 			contextFound = true;
 		encoder.encode(move(range));
-		if (order > -1)
-			charTable.increaseSymbolCount(charToEncode);
 	}
-
-	context.push_back(charToEncode);
-	context.erase(0, 1);
 }
 
-bool PPM::decode(ArithmeticDecoder& decoder)
+char PPM::decode(ArithmeticDecoder& decoder)
 {
 	bool contextFound = false;
 	char decodedChar;
@@ -44,28 +41,37 @@ bool PPM::decode(ArithmeticDecoder& decoder)
 		range = charTable.getRange(count);
 		decodedChar = range->character;
 		if (decodedChar != config::EscapeCharacter)
-		{
 			contextFound = true;
-			if (order == -1)
-				order++;
-			while (order <= config::MaxOrderSize)
-			{
-				currentContext = context.substr(context.length() - order, context.length());
-				PPMCharTable& charTable = getCharTable(currentContext, order);
-				charTable.increaseSymbolCount(decodedChar);
-				order++;
-			}
-		}
-			
 		decoder.decode(move(range));
 	}
 
-	if (decodedChar == config::EndCharacter)
-		return true;
+	return decodedChar;
+}
 
-	context.push_back(decodedChar);
+void PPM::update(const char& charToUpdate)
+{
+	if (charToUpdate == config::EndCharacter)
+		return;
+
+	bool contextFound = false;
+
+	// Runs from order of context size to the smallest order -1. Unless the context is found at an order.
+	for (int order = config::MaxOrderSize; !contextFound; order--)
+	{
+		unique_ptr<ProbRange> range;
+		string currentContext = context.substr(context.length() - (order >= 0 ? order : 0), context.length());
+		PPMCharTable& charTable = getCharTable(currentContext, order);
+		range = charTable.getRange(charToUpdate);
+		if (range->character == charToUpdate)
+			contextFound = true;
+
+		if (order > -1)
+			charTable.increaseSymbolCount(charToUpdate);
+	}
+
+	context.push_back(charToUpdate);
 	context.erase(0, 1);
-	return false;
+	nextCharProbabilityDistribution = getCharTable(context, config::MaxOrderSize);
 }
 
 PPM::PPMCharTable& PPM::getCharTable(const string& context, const int& order)
@@ -93,45 +99,35 @@ PPM::PPM()
 		context += " ";
 }
 
-/*
 #ifdef _DEBUG
-void ProbabilityModel::outputTables()
+void PPM::outputDebug(ofstream& outputFileStream)
 {
-	ofstream debugOutputFileStream(config::directory + "\\debug", std::ios_base::app);
-	debugOutputFileStream << "\n\n" << "-1" << "\n" << "\t" << "\"\"";
-	for (auto charIt = orderNegativeOneTable.charMap.begin(); charIt != orderNegativeOneTable.charMap.end(); charIt++)
-	{
-		debugOutputFileStream << "\n" << "\t\t" << "'" << charIt->first << "'" << "\t" << charIt->second.first << "\t" << charIt->second.second;
-	}
+	outputFileStream << "\n" << "-1";
+	orderNegativeOneTable.outputDebug(outputFileStream);
 	for (auto orderIt = orderTable.begin(); orderIt != orderTable.end(); orderIt++)
 	{
-		debugOutputFileStream << "\n" << orderIt->first;
+		outputFileStream << "\n" << orderIt->first;
 		for (auto contextIt = orderIt->second.begin(); contextIt != orderIt->second.end(); contextIt++)
 		{
-			debugOutputFileStream << "\n" << "\t" << "\"" << contextIt->first.c_str() << "\"";
+			outputFileStream << "\n" << "\t" << "\"" << contextIt->first.c_str() << "\"";
 			CharTable charTable = contextIt->second;
-			for (auto charIt = charTable.charMap.begin(); charIt != charTable.charMap.end(); charIt++)
-			{
-				debugOutputFileStream << "\n" << "\t\t" << "'" << charIt->first << "'" << "\t" << charIt->second.first << "\t" << charIt->second.second;
-			}
+			charTable.outputDebug(outputFileStream);
 		}
 	}
 }
 #endif
-*/
 
 unique_ptr<ProbRange> PPM::PPMCharTable::getRange(const char& c)
 {
 	unique_ptr<ProbRange> range;
-	auto result = charMap.insert(make_pair(c, make_pair(0, 0)));
-	auto charIt = result.first;
-	if (result.second == true) // Did not exist.
+	auto it = charMap.find(c);
+	if (it == charMap.end()) // Did not exist.
 	{
-		auto escapeCharIt = charMap.find(config::EscapeCharacter);
-		range = move(calculateRange(escapeCharIt));
+		it = charMap.find(config::EscapeCharacter);
+		range = move(calculateRange(it));
 	}
 	else
-		range = move(calculateRange(charIt));
+		range = move(calculateRange(it));
 
 	return range;
 }
