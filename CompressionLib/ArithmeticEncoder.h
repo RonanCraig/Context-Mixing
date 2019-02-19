@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 #include "Config.h"
-#include "CharTable.h"
+#include "ProbRange.h"
 
 namespace compression
 {
@@ -17,16 +17,16 @@ private:
 public:
 	ArithmeticEncoder(std::ofstream& outputFileStream) : outputFileStream(outputFileStream) {}
 
-	void encode(std::unique_ptr<ProbRange> probRange)
+	void encode(const ProbRange& probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		upperBound = lowerBound + (probRange->upper * (range / probRange->denom));
-		lowerBound += probRange->lower * (range / probRange->denom);
+		upperBound = lowerBound + (probRange.upper * (range / probRange.denom));
+		lowerBound += probRange.lower * (range / probRange.denom);
 
 		renormalizeBounds();
 
 		// Character representing end of encoding.
-		if (probRange->character == config::EndCharacter)
+		if (probRange.character == config::EndCharacter)
 		{
 			pending_bits++;
 			if (lowerBound < 0x40000000)

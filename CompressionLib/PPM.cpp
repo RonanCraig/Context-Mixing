@@ -1,86 +1,171 @@
 #include "PPM.h"
 #include <fstream>
 #include <set>
+#include <vector>
 
 using namespace std;
 using namespace compression;
 
-// TODO: Reduce duplicated code between encode, decode and update.
-
 void PPM::encode(const char& charToEncode, ArithmeticEncoder& encoder)
 {
+	// First node to be added will be updated as base node.
 	bool contextFound = false;
+	Node* vinePtr = basePtr->vine;
+	auto NodeAndRange = getNodeAndRange(vinePtr, charToEncode);
+	Node* childNodePtr = NodeAndRange.first;
+	basePtr = childNodePtr;
+	if (childNodePtr->count > 1)
+		contextFound = true;
+	encoder.encode(NodeAndRange.second);
 
-	// Runs from order of context size to the smallest order -1. Unless the context is found at an order.
-	for (int order = config::MaxOrderSize; !contextFound; order--)
+	// Reduce context size and add character as node. 
+	while (vinePtr = vinePtr->vine)
 	{
-		unique_ptr<ProbRange> range;
-		string currentContext = context.substr(context.length() - (order >= 0 ? order : 0), context.length());
-		PPMCharTable& charTable = getCharTable(currentContext, order);
-		range = charTable.getRange(charToEncode);
-		if (range->character == charToEncode)
+		NodeAndRange = getNodeAndRange(vinePtr, charToEncode);
+		Node* childNodePtr2 = NodeAndRange.first;
+
+		// Only encodes if the character has not been seen at higher order contexts.
+		if (!contextFound)
+			encoder.encode(NodeAndRange.second);
+
+		if (childNodePtr2->count > 1)
 			contextFound = true;
-		encoder.encode(move(range));
+		childNodePtr->vine = childNodePtr2;
+		childNodePtr = childNodePtr2;
 	}
+	childNodePtr->vine = rootPtr;
+
+	// If character was not seen at any contexts the -1 orderTable is used.
+	if (!contextFound)
+	{
+		ProbRange range;
+		range.character = charToEncode;
+		int cumCount = orderNegativeOneTableByChar.at(charToEncode);
+		range.denom = orderNegativeOneTableByChar.size();
+		range.lower = cumCount;
+		range.upper = cumCount + 1;
+		encoder.encode(range);
+	}
+}
+
+pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const char& charToEncode)
+{
+	ProbRange range;
+	CountingNodeTraverser traverser(parentNode);
+	Node* charNode = traverser.findNode(charToEncode);
+	int escapeCount = traverser.getEscapeCount();
+
+	if (charNode != nullptr)
+	{
+		range.lower = traverser.count;
+		range.upper = range.lower + charNode->count;
+		range.character = charToEncode;
+		traverser.iterateToEnd();
+	}
+	else
+	{
+		charNode = traverser.addNode(charToEncode);
+		range.lower = traverser.count;
+		range.upper = range.lower + escapeCount;
+		range.character = config::EscapeCharacter;
+	}
+
+	range.denom = traverser.count + escapeCount;
+	charNode->count++;
+	pair<PPM::Node*, ProbRange> pair(charNode, range);
+	return pair;
 }
 
 char PPM::decode(ArithmeticDecoder& decoder)
 {
+	// First node to be added will be updated as base node.
 	bool contextFound = false;
-	char decodedChar;
+	int count = 0;
+	int totalCount = 0;
 
-	// Runs from order of context size to the smallest order -1. Unless the context is found at an order.
-	for (int order = config::MaxOrderSize; !contextFound; order--)
+	Node* vinePtr = basePtr->vine;
+	
+	// Decode escape characters till the count is less than the escape char count.
+	while (!contextFound && vinePtr != nullptr)
 	{
-		int count;
-		unique_ptr<ProbRange> range;
-		string currentContext = context.substr(context.length() - (order >= 0 ? order : 0), context.length());
-		PPMCharTable& charTable = getCharTable(currentContext, order);
+		CountingNodeTraverser traverser(vinePtr);
+		traverser.iterateToEnd();
 
-		count = decoder.getCount(charTable.getTotalCount());
-		range = charTable.getRange(count);
-		decodedChar = range->character;
-		if (decodedChar != config::EscapeCharacter)
+		int escapeCount = traverser.getEscapeCount();
+		totalCount = traverser.count + escapeCount;
+		count = decoder.getCount(totalCount);
+
+		if (count >= totalCount - escapeCount)
+		{
+			ProbRange range(config::EscapeCharacter, totalCount, totalCount - escapeCount, totalCount);
+			decoder.decode(range);
+			vinePtr = vinePtr->vine;
+		}
+		else
 			contextFound = true;
-		decoder.decode(move(range));
 	}
 
-	return decodedChar;
+	ProbRange charRange;
+
+	// If the char to be decoded is one of the children of the current vinePtr.
+	if (contextFound)
+	{
+		CountingNodeTraverser traverser(vinePtr);
+		Node* node = vinePtr->child;
+		bool found = false;
+		while (!found)
+		{
+			if (traverser.count <= count && (traverser.count + node->count) > count)
+			{
+				charRange.character = node->character;
+				charRange.denom = totalCount;
+				charRange.lower = traverser.count;
+				charRange.upper = traverser.count + node->count;
+				found = true;
+			}
+			node = traverser.traverse();
+		}
+	}
+	// If this character had not been seen yet and was therefore encoded with order -1.
+	else
+	{
+		count = decoder.getCount(orderNegativeOneTableByCount.size());
+		charRange.character = orderNegativeOneTableByCount[count];
+		charRange.denom = orderNegativeOneTableByCount.size();
+		charRange.lower = count;
+		charRange.upper = count + 1;
+	}
+
+	decoder.decode(charRange);
+	
+	// Update all counts with decoded character.
+	update(charRange.character);
+	
+	return charRange.character;
 }
 
 void PPM::update(const char& charToUpdate)
 {
-	if (charToUpdate == config::EndCharacter)
-		return;
+	// First node to be added will be updated as base node.
+	Node* vinePtr = basePtr->vine;
+	NodeTraverser traverser(vinePtr);
+	Node* lastNodeAdded = traverser.findNode(charToUpdate);
+	if (lastNodeAdded == nullptr)
+		lastNodeAdded = traverser.addNode(charToUpdate);
+	lastNodeAdded->count++;
+	basePtr = lastNodeAdded;
 
-	bool contextFound = false;
-
-	// Runs from order of context size to the smallest order -1. Unless the context is found at an order.
-	for (int order = config::MaxOrderSize; !contextFound; order--)
+	while (vinePtr = vinePtr->vine)
 	{
-		unique_ptr<ProbRange> range;
-		string currentContext = context.substr(context.length() - (order >= 0 ? order : 0), context.length());
-		PPMCharTable& charTable = getCharTable(currentContext, order);
-		range = charTable.getRange(charToUpdate);
-		if (range->character == charToUpdate)
-			contextFound = true;
-
-		if (order > -1)
-			charTable.increaseSymbolCount(charToUpdate);
+		NodeTraverser traverser(vinePtr);
+		Node* nodeAdded = traverser.findNode(charToUpdate);
+		if (nodeAdded == nullptr)
+			nodeAdded = traverser.addNode(charToUpdate);
+		nodeAdded->count++;
+		lastNodeAdded->vine = nodeAdded;
+		lastNodeAdded = nodeAdded;
 	}
-
-	context.push_back(charToUpdate);
-	context.erase(0, 1);
-	nextCharProbabilityDistribution = getCharTable(context, config::MaxOrderSize);
-}
-
-PPM::PPMCharTable& PPM::getCharTable(const string& context, const int& order)
-{
-	if (order == -1)
-		return orderNegativeOneTable; // order -1 table has no context and is therefore stored seperately.
-
-	ContextTable& contextTable = orderTable[order]; // Retrieves the contextTable containing all contexts of the order length.
-	return contextTable[context]; // Retrieves the CharTable for the given context.
+	lastNodeAdded->vine = rootPtr;
 }
 
 PPM::PPM()
@@ -93,64 +178,81 @@ PPM::PPM()
 		uniqueChars.insert(c);
 	uniqueChars.insert(config::EndCharacter);
 	for (char c : uniqueChars)
-		orderNegativeOneTable.increaseSymbolCount(c);
+	{
+		orderNegativeOneTableByChar.insert(pair<char, int>(c, orderNegativeOneTableByChar.size()));
+		orderNegativeOneTableByCount.insert(pair<int, char>(orderNegativeOneTableByCount.size(), c));
+	}
 
-	for (int i = 0; i < config::MaxOrderSize; i++)
-		context += " ";
+	Node* firstNode = new Node(' ');
+	rootPtr = firstNode;
+	for (int i = 0; i < config::MaxOrderSize + 1; i++)
+	{
+		Node* secondNode = new Node(' ');
+		firstNode->child = secondNode;
+		secondNode->vine = firstNode;
+		firstNode = secondNode;
+	}
+	basePtr = firstNode;
 }
+
+PPM::Node* PPM::NodeTraverser::findNode(const char& charToFind)
+{
+	Node* currentNode = *next;
+	while (currentNode != nullptr && currentNode->character != charToFind)
+		currentNode = traverse();
+	return currentNode;
+}
+
+PPM::Node* PPM::NodeTraverser::traverse()
+{
+	next = &((*next)->sibling);
+	return *next;
+}
+
+PPM::Node* PPM::CountingNodeTraverser::traverse()
+{
+	escapeCount++;
+	count += (*next)->count;
+	return NodeTraverser::traverse();
+}
+
+PPM::Node* PPM::NodeTraverser::addNode(const char& character)
+{
+	*next = new Node(character);
+	return *next;
+}
+
+void PPM::NodeTraverser::iterateToEnd()
+{
+	while (*next != nullptr)
+		traverse();
+}
+
+int PPM::CountingNodeTraverser::getEscapeCount()
+{
+	if (escapeCount == 0)
+		escapeCount++;
+
+	// Escape count equals the total count divided by the number of different characters seen at the context.
+	escapeCount = count / escapeCount;
+
+	if (escapeCount == 0)
+		escapeCount++;
+
+	return escapeCount;
+}
+
+PPM::NodeTraverser::NodeTraverser(Node* parent)
+{
+	next = &parent->child;
+}
+
+PPM::CountingNodeTraverser::CountingNodeTraverser(Node* parent) : NodeTraverser(parent) {}
 
 #ifdef _DEBUG
 void PPM::outputDebug(ofstream& outputFileStream)
 {
-	outputFileStream << "\n" << "-1";
-	orderNegativeOneTable.outputDebug(outputFileStream);
-	for (auto orderIt = orderTable.begin(); orderIt != orderTable.end(); orderIt++)
-	{
-		outputFileStream << "\n" << orderIt->first;
-		for (auto contextIt = orderIt->second.begin(); contextIt != orderIt->second.end(); contextIt++)
-		{
-			outputFileStream << "\n" << "\t" << "\"" << contextIt->first.c_str() << "\"";
-			CharTable charTable = contextIt->second;
-			charTable.outputDebug(outputFileStream);
-		}
-	}
+
 }
 #endif
-
-unique_ptr<ProbRange> PPM::PPMCharTable::getRange(const char& c)
-{
-	unique_ptr<ProbRange> range;
-	auto it = charMap.find(c);
-	if (it == charMap.end()) // Did not exist.
-	{
-		it = charMap.find(config::EscapeCharacter);
-		range = move(calculateRange(it));
-	}
-	else
-		range = move(calculateRange(it));
-
-	return range;
-}
-
-unique_ptr<ProbRange> PPM::PPMCharTable::getRange(const int& count)
-{
-	auto it = charMap.begin();
-	while (!(count < it->second.second))
-		it++;
-
-	unique_ptr<ProbRange> range = move(calculateRange(it));
-	return range;
-}
-
-std::unique_ptr<ProbRange>  PPM::PPMCharTable::calculateRange(CharMap::iterator it)
-{
-	// Calculates the probablilty range for the given character.
-	unique_ptr<ProbRange> probRange = make_unique<ProbRange>(ProbRange());
-	pair<int, int> CountandCumCount = it->second;
-	probRange->character = it->first;
-	probRange->denom = totalCount;
-	probRange->upper = CountandCumCount.second;
-	probRange->lower = CountandCumCount.second - CountandCumCount.first;
-	return probRange;
-}
 

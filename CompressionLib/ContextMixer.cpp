@@ -12,7 +12,7 @@ using namespace compression;
  {
 	 for (Model* m : models)
 	 {
-		 m->update(charToUpdate);
+		 //m->update(charToUpdate);
 	 }
  }
 

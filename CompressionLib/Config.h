@@ -11,7 +11,7 @@ enum encodingValues
 const encodingValues encodingType = UTF8;
 const char EscapeCharacter = '&';
 const char EndCharacter = '*';
-const int MaxOrderSize = 5; // Max size of order used by PPM.
+const int MaxOrderSize = 2; // Max size of order used by PPM.
 
 }
 

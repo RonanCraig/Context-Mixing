@@ -2,7 +2,7 @@
 #include <fstream>
 #include <map>
 #include <string>
-#include "CharTable.h"
+#include "ProbRange.h"
 
 namespace compression
 {
@@ -25,17 +25,16 @@ public:
 		}
 	}
 
-	char decode(std::unique_ptr<ProbRange> probRange)
+	void decode(ProbRange& probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		upperBound = lowerBound + (probRange->upper * (range / probRange->denom));
-		lowerBound += probRange->lower * (range / probRange->denom);
+		upperBound = lowerBound + (probRange.upper * (range / probRange.denom));
+		lowerBound += probRange.lower * (range / probRange.denom);
 
 		renormalizeCode();
-		char& c = probRange->character;
+		char& c = probRange.character;
 		if(c != config::EscapeCharacter && c != config::EndCharacter)
-			outputFileStream << probRange->character;
-		return c;
+			outputFileStream << probRange.character;
 	}
 
 	int getCount(const int& totalCount)

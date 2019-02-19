@@ -124,10 +124,9 @@
     <ClInclude Include="Decompressor.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="PPM.h" />
-    <ClInclude Include="CharTable.h" />
+    <ClInclude Include="ProbRange.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CharTable.cpp" />
     <ClCompile Include="Compressor.cpp" />
     <ClCompile Include="ContextMixer.cpp" />
     <ClCompile Include="Decompressor.cpp" />

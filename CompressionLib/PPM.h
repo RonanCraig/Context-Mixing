@@ -2,8 +2,8 @@
 #include <memory>
 #include <string>
 #include "Config.h"
-#include "CharTable.h"
 #include "Model.h"
+#include "ProbRange.h"
 #include "ArithmeticEncoder.h"
 
 namespace compression
@@ -12,25 +12,48 @@ namespace compression
 class PPM : public Model
 {
 
-class PPMCharTable : public CharTable
+struct Node
 {
-	//Methods
-public:
-	PPMCharTable() { increaseSymbolCount(config::EscapeCharacter); }
-	PPMCharTable(bool isNegativeOrder) {}
-	std::unique_ptr<ProbRange> getRange(const char& c);
-	std::unique_ptr<ProbRange> getRange(const int& count);
-private:
-	std::unique_ptr<ProbRange> calculateRange(CharMap::iterator it);
+	char character;
+	int count = 0;
+	Node* child = nullptr;
+	Node* sibling = nullptr;
+	Node* vine = nullptr;
+	Node(const char& character, int count = 0) : character(character), count(count) {}
 };
-	
+
+class NodeTraverser
+{
+public:
+	// Methods
+	virtual Node* traverse();
+	Node* addNode(const char& character);
+	Node* findNode(const char& charToFind);
+	void iterateToEnd();
+	NodeTraverser(Node* parent);
+	Node** next;
+};
+
+class CountingNodeTraverser : public NodeTraverser
+{
+public:
+	// Attributes
+	int count = 0;
+
+	// Methods
+	CountingNodeTraverser(Node* parent);
+	Node* traverse();
+	int getEscapeCount();
+private:
+	int escapeCount = 0;
+};
+
 // Attributes
 private:
-	std::string context = "";
-	typedef std::map<std::string, PPMCharTable> ContextTable;
-	typedef std::map<int, ContextTable> OrderTable;
-	OrderTable orderTable;
-	PPMCharTable orderNegativeOneTable = PPMCharTable(true);
+	Node* basePtr;
+	Node* rootPtr;
+	std::map<char, int> orderNegativeOneTableByChar;
+	std::map<int, char> orderNegativeOneTableByCount;
 
 // Methods
 public:
@@ -49,7 +72,8 @@ public:
 #endif // DEBUG
 
 private:
-	PPMCharTable& getCharTable(const std::string& context, const int& order);
+	std::pair<Node*, ProbRange> getNodeAndRange(Node* parentNode, const char& charToEncode);
+	void addNodes(Node* vine, const char& character);
 
 };
 
