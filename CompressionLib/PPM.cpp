@@ -53,20 +53,21 @@ pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const ch
 	ProbRange range;
 	CountingNodeTraverser traverser(parentNode);
 	Node* charNode = traverser.findNode(charToEncode);
+	int lower = traverser.count;
+	traverser.iterateToEnd();
 	int escapeCount = traverser.getEscapeCount();
 
 	if (charNode != nullptr)
 	{
-		range.lower = traverser.count;
-		range.upper = range.lower + charNode->count;
+		range.lower = lower;
+		range.upper = lower + charNode->count;
 		range.character = charToEncode;
-		traverser.iterateToEnd();
 	}
 	else
 	{
 		charNode = traverser.addNode(charToEncode);
 		range.lower = traverser.count;
-		range.upper = range.lower + escapeCount;
+		range.upper = lower + escapeCount;
 		range.character = config::EscapeCharacter;
 	}
 
