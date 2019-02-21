@@ -1,5 +1,7 @@
 #pragma once
 
+typedef int characterCode;
+
 namespace config
 {
 
@@ -9,8 +11,8 @@ enum encodingValues
 };
 
 const encodingValues encodingType = UTF8;
-const char EscapeCharacter = '&';
-const char EndCharacter = '*';
+const characterCode EscapeCharacter = 256;
+const characterCode EndCharacter = 257;
 const int MaxOrderSize = 2; // Max size of order used by PPM.
 
 }

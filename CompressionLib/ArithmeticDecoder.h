@@ -32,9 +32,9 @@ public:
 		lowerBound += probRange.lower * (range / probRange.denom);
 
 		renormalizeCode();
-		char& c = probRange.character;
+		characterCode& c = probRange.character;
 		if(c != config::EscapeCharacter && c != config::EndCharacter)
-			outputFileStream << probRange.character;
+			outputFileStream << (char)probRange.character;
 	}
 
 	int getCount(const int& totalCount)

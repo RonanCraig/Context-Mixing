@@ -8,7 +8,7 @@ using namespace compression;
 	 return ppm;
 }
 
- void ContextMixer::updateModels(const char& charToUpdate)
+ void ContextMixer::updateModels(const characterCode& charToUpdate)
  {
 	 for (Model* m : models)
 	 {

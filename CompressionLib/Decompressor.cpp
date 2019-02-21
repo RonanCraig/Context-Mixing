@@ -12,7 +12,7 @@ void Decompressor::decompress()
 	ifstream inputFileStream(directory + "\\code");
 	ArithmeticDecoder decoder(inputFileStream, outputFileStream);
 
-	char decodedChar = ' ';
+	characterCode decodedChar = (characterCode)' ';
 	
 	while (decodedChar != config::EndCharacter)
 	{

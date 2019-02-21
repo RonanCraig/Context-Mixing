@@ -6,7 +6,7 @@
 using namespace std;
 using namespace compression;
 
-void PPM::encode(const char& charToEncode, ArithmeticEncoder& encoder)
+void PPM::encode(const characterCode& charToEncode, ArithmeticEncoder& encoder)
 {
 	// First node to be added will be updated as base node.
 	bool contextFound = false;
@@ -48,7 +48,7 @@ void PPM::encode(const char& charToEncode, ArithmeticEncoder& encoder)
 	}
 }
 
-pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const char& charToEncode)
+pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const characterCode& charToEncode)
 {
 	ProbRange range;
 	CountingNodeTraverser traverser(parentNode);
@@ -77,7 +77,7 @@ pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const ch
 	return pair;
 }
 
-char PPM::decode(ArithmeticDecoder& decoder)
+characterCode PPM::decode(ArithmeticDecoder& decoder)
 {
 	// First node to be added will be updated as base node.
 	bool contextFound = false;
@@ -145,7 +145,7 @@ char PPM::decode(ArithmeticDecoder& decoder)
 	return charRange.character;
 }
 
-void PPM::update(const char& charToUpdate)
+void PPM::update(const characterCode& charToUpdate)
 {
 	// First node to be added will be updated as base node.
 	Node* vinePtr = basePtr->vine;
@@ -173,22 +173,23 @@ PPM::PPM()
 {
 	// Finds all the unique characters in the message and adds them to the alphabet.
 	ifstream inputFileStream("C:/Users/Ronan/source/repos/ContextMixing/Debug/input");
-	set<char> uniqueChars;
+	set<characterCode> uniqueChars;
 	char c;
 	while (inputFileStream.get(c))
-		uniqueChars.insert(c);
+		uniqueChars.insert((characterCode)c);
+		
 	uniqueChars.insert(config::EndCharacter);
-	for (char c : uniqueChars)
+	for (characterCode c : uniqueChars)
 	{
-		orderNegativeOneTableByChar.insert(pair<char, int>(c, orderNegativeOneTableByChar.size()));
-		orderNegativeOneTableByCount.insert(pair<int, char>(orderNegativeOneTableByCount.size(), c));
+		orderNegativeOneTableByChar.insert(pair<characterCode, int>(c, orderNegativeOneTableByChar.size()));
+		orderNegativeOneTableByCount.insert(pair<int, characterCode>(orderNegativeOneTableByCount.size(), c));
 	}
 
 	Node* firstNode = new Node(' ');
 	rootPtr = firstNode;
 	for (int i = 0; i < config::MaxOrderSize + 1; i++)
 	{
-		Node* secondNode = new Node(' ');
+		Node* secondNode = new Node(258);
 		firstNode->child = secondNode;
 		secondNode->vine = firstNode;
 		firstNode = secondNode;
@@ -196,7 +197,7 @@ PPM::PPM()
 	basePtr = firstNode;
 }
 
-PPM::Node* PPM::NodeTraverser::findNode(const char& charToFind)
+PPM::Node* PPM::NodeTraverser::findNode(const characterCode& charToFind)
 {
 	Node* currentNode = *next;
 	while (currentNode != nullptr && currentNode->character != charToFind)
@@ -217,7 +218,7 @@ PPM::Node* PPM::CountingNodeTraverser::traverse()
 	return NodeTraverser::traverse();
 }
 
-PPM::Node* PPM::NodeTraverser::addNode(const char& character)
+PPM::Node* PPM::NodeTraverser::addNode(const characterCode& character)
 {
 	*next = new Node(character);
 	return *next;

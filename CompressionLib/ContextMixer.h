@@ -13,7 +13,7 @@ private:
 	PPM ppm;
 public:
 	Model& getBestModel();
-	void updateModels(const char& charToUpdate);
+	void updateModels(const characterCode& charToUpdate);
 #ifdef _DEBUG
 	void outputDebug(std::ofstream& outputFileStream);
 #endif // _DEBUG

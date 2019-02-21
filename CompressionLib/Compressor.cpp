@@ -14,18 +14,22 @@ void Compressor::compress()
 	ArithmeticEncoder encoder(outputFileStream);
 
 	// Main loop, compressing each character individually.
-	char c;
 	bool finished = false;
 	while (!finished)
 	{
+		char c;
+		characterCode character;
 		if (!inputFileStream.get(c))
 		{
 			finished = true;
-			c = config::EndCharacter;
+			character = config::EndCharacter;
 		}
+		else
+			character = (characterCode)c;
+
 		Model& model = contextMixer.getBestModel();
-		model.encode(c, encoder);
-		contextMixer.updateModels(c);
+		model.encode(character, encoder);
+		contextMixer.updateModels(character);
 
 	}
 
