@@ -14,9 +14,6 @@ private:
 public:
 	Model& getBestModel();
 	void updateModels(const characterCode& charToUpdate);
-#ifdef _DEBUG
-	void outputDebug(std::ofstream& outputFileStream);
-#endif // _DEBUG
 	ContextMixer();
 };
 

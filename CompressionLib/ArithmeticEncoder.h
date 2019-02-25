@@ -13,9 +13,14 @@ private:
 	unsigned int upperBound = 0xFFFFFFFFU;
 	unsigned int lowerBound = 0;
 	int pending_bits = 0;
-	std::ofstream& outputFileStream;
+	std::basic_ofstream<byte>& outputFileStream;
+
+	// Used for outputting bits in blocks of bytes.
+	byte buffer = 0;
+	int current_bit = 0;
+
 public:
-	ArithmeticEncoder(std::ofstream& outputFileStream) : outputFileStream(outputFileStream) {}
+	ArithmeticEncoder(std::basic_ofstream<byte>& outputFileStream) : outputFileStream(outputFileStream) {}
 
 	void encode(const ProbRange& probRange)
 	{
@@ -33,6 +38,7 @@ public:
 				output_bit_plus_pending(0);
 			else
 				output_bit_plus_pending(1);
+			flushBuffer();
 		}
 	}
 
@@ -61,10 +67,30 @@ private:
 
 	void output_bit_plus_pending(bool bit)
 	{
-		outputFileStream << bit;
+		writeBit(bit);
 		for (int i = 0; i < pending_bits; i++)
-			outputFileStream << !bit;
+			writeBit(!bit);
 		pending_bits = 0;
+	}
+
+	void writeBit(bool bit)
+	{
+		if (bit)
+			buffer |= (128 >> current_bit);
+
+		current_bit++;
+		if (current_bit == 8)
+		{
+			outputFileStream << buffer;
+			current_bit = 0;
+			buffer = 0;
+		}
+	}
+
+	void flushBuffer()
+	{
+		while (current_bit)
+			writeBit(0);
 	}
 };
 

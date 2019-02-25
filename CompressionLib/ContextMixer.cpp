@@ -21,12 +21,3 @@ using namespace compression;
 	 models.push_back(&ppm);
  }
 
-#ifdef _DEBUG
- void ContextMixer::outputDebug(ofstream& outputFileStream)
- {
-	 for (Model* m : models)
-	 {
-		 m->outputDebug(outputFileStream);
-	 }
- }
-#endif // _DEBUG

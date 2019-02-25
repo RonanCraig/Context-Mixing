@@ -62,7 +62,7 @@ public:
 	// Creates a probability range for the character to encode if the character has been seen before.
 	void encode(const characterCode& charToEncode, ArithmeticEncoder& encoder);
 	// Similar to encode except uses code instead of character to find ranges.
-	int decode(ArithmeticDecoder& decoder);
+	characterCode decode(ArithmeticDecoder& decoder);
 	// Updates the counts for contexts.
 	void update(const characterCode& charToUpdate);
 	PPM();
@@ -73,7 +73,6 @@ public:
 
 private:
 	std::pair<Node*, ProbRange> getNodeAndRange(Node* parentNode, const characterCode& charToEncode);
-	void addNodes(Node* vine, const characterCode& character);
 
 };
 

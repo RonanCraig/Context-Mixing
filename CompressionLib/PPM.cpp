@@ -171,25 +171,17 @@ void PPM::update(const characterCode& charToUpdate)
 
 PPM::PPM()
 {
-	// Finds all the unique characters in the message and adds them to the alphabet.
-	ifstream inputFileStream("C:/Users/Ronan/source/repos/ContextMixing/Debug/input");
-	set<characterCode> uniqueChars;
-	char c;
-	while (inputFileStream.get(c))
-		uniqueChars.insert((characterCode)c);
-		
-	uniqueChars.insert(config::EndCharacter);
-	for (characterCode c : uniqueChars)
+	for (characterCode i = 0; i <= config::EndCharacter; i++)
 	{
-		orderNegativeOneTableByChar.insert(pair<characterCode, int>(c, orderNegativeOneTableByChar.size()));
-		orderNegativeOneTableByCount.insert(pair<int, characterCode>(orderNegativeOneTableByCount.size(), c));
+		orderNegativeOneTableByChar.insert(pair<characterCode, int>(i, orderNegativeOneTableByChar.size()));
+		orderNegativeOneTableByCount.insert(pair<int, characterCode>(orderNegativeOneTableByCount.size(), i));
 	}
 
-	Node* firstNode = new Node(' ');
+	Node* firstNode = new Node(config::EscapeCharacter);
 	rootPtr = firstNode;
 	for (int i = 0; i < config::MaxOrderSize + 1; i++)
 	{
-		Node* secondNode = new Node(258);
+		Node* secondNode = new Node(config::EscapeCharacter);
 		firstNode->child = secondNode;
 		secondNode->vine = firstNode;
 		firstNode = secondNode;

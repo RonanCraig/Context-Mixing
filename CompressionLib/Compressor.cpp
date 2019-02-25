@@ -8,8 +8,8 @@ using namespace compression;
 
 void Compressor::compress()
 {
-	ofstream outputFileStream(directory + "\\code");
-	ifstream inputFileStream(directory + "\\input");
+	basic_ofstream<byte> outputFileStream(directory + "\\code", ios::binary);
+	basic_ifstream<byte> inputFileStream(directory + "\\" + config::inputfile);
 
 	ArithmeticEncoder encoder(outputFileStream);
 
@@ -17,7 +17,7 @@ void Compressor::compress()
 	bool finished = false;
 	while (!finished)
 	{
-		char c;
+		byte c;
 		characterCode character;
 		if (!inputFileStream.get(c))
 		{
@@ -36,7 +36,6 @@ void Compressor::compress()
 #ifdef _DEBUG
 	outputFileStream.close();
 	outputFileStream.open(directory + "\\debug");
-	contextMixer.outputDebug(outputFileStream);
 #endif // _DEBUG
 
 

@@ -8,8 +8,8 @@ using namespace compression;
 
 void Decompressor::decompress()
 {
-	ofstream outputFileStream(directory + "\\result");
-	ifstream inputFileStream(directory + "\\code");
+	basic_ofstream<byte> outputFileStream(directory + "\\result");
+	basic_ifstream<byte> inputFileStream(directory + "\\code", ios::binary);
 	ArithmeticDecoder decoder(inputFileStream, outputFileStream);
 
 	characterCode decodedChar = (characterCode)' ';

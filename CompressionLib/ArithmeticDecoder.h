@@ -13,10 +13,13 @@ private:
 	unsigned int upperBound = 0xFFFFFFFFU;
 	unsigned int lowerBound = 0;
 	unsigned int value = 0;
-	std::ifstream& inputFileStream;
-	std::ofstream& outputFileStream;
+	std::basic_ifstream<byte>& inputFileStream;
+	std::basic_ofstream<byte>& outputFileStream;
+
+	byte buffer = 0;
+	int current_bit = 8;
 public:
-	ArithmeticDecoder(std::ifstream& inputFileStream, std::ofstream& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
+	ArithmeticDecoder(std::basic_ifstream<byte>& inputFileStream, std::basic_ofstream<byte>& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
 	{
 		for (int i = 0; i < 32; i++)
 		{
@@ -34,7 +37,7 @@ public:
 		renormalizeCode();
 		characterCode& c = probRange.character;
 		if(c != config::EscapeCharacter && c != config::EndCharacter)
-			outputFileStream << (char)probRange.character;
+			outputFileStream << (byte)probRange.character;
 	}
 
 	int getCount(const int& totalCount)
@@ -71,14 +74,16 @@ private:
 
 	bool getNextBit()
 	{
-		char nextBit;
-		inputFileStream.get(nextBit);
-		if (!inputFileStream.eof())
+		if (current_bit == 8)
 		{
-			if (nextBit == '1')
-				return true;
+			current_bit = 0;
+			inputFileStream.get(buffer);
 		}
-		return false;
+			
+		bool bit = buffer & (128 >> current_bit);
+		current_bit++;
+
+		return bit;
 	}
 };
 
