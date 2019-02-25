@@ -6,7 +6,7 @@ typedef unsigned char byte;
 
 namespace config
 {
-
+const int TotalUniqueChars = 257;
 const std::string inputfile = "input";
 const characterCode EndCharacter = 256;
 const characterCode EscapeCharacter = 257;

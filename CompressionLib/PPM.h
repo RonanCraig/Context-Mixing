@@ -52,8 +52,6 @@ private:
 private:
 	Node* basePtr;
 	Node* rootPtr;
-	std::map<characterCode, int> orderNegativeOneTableByChar;
-	std::map<int, characterCode> orderNegativeOneTableByCount;
 
 // Methods
 public:

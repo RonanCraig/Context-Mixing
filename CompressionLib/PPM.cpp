@@ -40,8 +40,8 @@ void PPM::encode(const characterCode& charToEncode, ArithmeticEncoder& encoder)
 	{
 		ProbRange range;
 		range.character = charToEncode;
-		int cumCount = orderNegativeOneTableByChar.at(charToEncode);
-		range.denom = orderNegativeOneTableByChar.size();
+		int cumCount = (int)charToEncode;
+		range.denom = config::TotalUniqueChars;
 		range.lower = cumCount;
 		range.upper = cumCount + 1;
 		encoder.encode(range);
@@ -130,9 +130,9 @@ characterCode PPM::decode(ArithmeticDecoder& decoder)
 	// If this character had not been seen yet and was therefore encoded with order -1.
 	else
 	{
-		count = decoder.getCount(orderNegativeOneTableByCount.size());
-		charRange.character = orderNegativeOneTableByCount[count];
-		charRange.denom = orderNegativeOneTableByCount.size();
+		count = decoder.getCount(config::TotalUniqueChars);
+		charRange.character = count;
+		charRange.denom = config::TotalUniqueChars;
 		charRange.lower = count;
 		charRange.upper = count + 1;
 	}
@@ -171,12 +171,6 @@ void PPM::update(const characterCode& charToUpdate)
 
 PPM::PPM()
 {
-	for (characterCode i = 0; i <= config::EndCharacter; i++)
-	{
-		orderNegativeOneTableByChar.insert(pair<characterCode, int>(i, orderNegativeOneTableByChar.size()));
-		orderNegativeOneTableByCount.insert(pair<int, characterCode>(orderNegativeOneTableByCount.size(), i));
-	}
-
 	Node* firstNode = new Node(config::EscapeCharacter);
 	rootPtr = firstNode;
 	for (int i = 0; i < config::MaxOrderSize + 1; i++)
@@ -232,8 +226,8 @@ int PPM::CountingNodeTraverser::getEscapeCount()
 
 	if (escapeCount == 0)
 		escapeCount++;
-
-	return escapeCount;
+	return 1;
+	//return escapeCount;
 }
 
 PPM::NodeTraverser::NodeTraverser(Node* parent)
