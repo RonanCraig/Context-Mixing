@@ -10,10 +10,7 @@ using namespace compression;
 
  void ContextMixer::updateModels(const characterCode& charToUpdate)
  {
-	 for (Model* m : models)
-	 {
-		 //m->update(charToUpdate);
-	 }
+
  }
 
  ContextMixer::ContextMixer()

@@ -15,43 +15,70 @@ class PPM : public Model
 struct Node
 {
 	characterCode character;
-	int count = 0;
+	int count = 1;
 	Node* child = nullptr;
 	Node* sibling = nullptr;
 	Node* vine = nullptr;
-	Node(const characterCode& character, int count = 0) : character(character), count(count) {}
+	Node(const characterCode& character) : character(character) {}
 };
 
 class NodeTraverser
 {
-public:
-	// Methods
-	virtual Node* traverse();
-	Node* addNode(const characterCode& character);
-	Node* findNode(const characterCode& charToFind);
-	void iterateToEnd();
-	NodeTraverser(Node* parent);
+// Attributes
+protected:
+	characterCode character;
 	Node** next;
+	Node* vine;
+
+// Methods
+public:
+	NodeTraverser(const characterCode& character, Node* base, Node* root);
+	
+protected:
+	virtual Node* run();
+	virtual void traverse();
+	virtual void addNode();
 };
 
 class CountingNodeTraverser : public NodeTraverser
 {
-public:
-	// Attributes
+// Attributes
+protected:
+	int uniqueCount = 0;
 	int count = 0;
+	int totalCount = 0;
+	bool contextFound = false;
 
-	// Methods
-	CountingNodeTraverser(Node* parent);
-	Node* traverse();
-	int getEscapeCount();
+// Methods
+public:
+	CountingNodeTraverser(const characterCode& character, Node* base, Node* root) : NodeTraverser(character, base, root) {}
+	
+protected:
+	virtual Node* run();
+	virtual void traverse();
+	int calculateEscapeCount();
+
+};
+
+class EncodingTraverser : CountingNodeTraverser
+{
+// Attributes
 private:
-	int escapeCount = 0;
+	ArithmeticEncoder& encoder;
+
+// Methods
+public:
+	EncodingTraverser(const characterCode& character, Node* base, Node* root, ArithmeticEncoder& encoder) : CountingNodeTraverser(character, base, root), encoder(encoder) {}
+
+private:
+	void addNode();
+	void encode(int upper, int lower, int denom, characterCode character);
 };
 
 // Attributes
 private:
-	Node* basePtr;
-	Node* rootPtr;
+	Node* base;
+	Node* root;
 
 // Methods
 public:
@@ -64,10 +91,6 @@ public:
 	// Updates the counts for contexts.
 	void update(const characterCode& charToUpdate);
 	PPM();
-
-#ifdef _DEBUG
-	void outputDebug(std::ofstream& outputFileStream);
-#endif // DEBUG
 
 private:
 	std::pair<Node*, ProbRange> getNodeAndRange(Node* parentNode, const characterCode& charToEncode);

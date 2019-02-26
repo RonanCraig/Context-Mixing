@@ -8,77 +8,13 @@ using namespace compression;
 
 void PPM::encode(const characterCode& charToEncode, ArithmeticEncoder& encoder)
 {
-	// First node to be added will be updated as base node.
-	bool contextFound = false;
-	Node* vinePtr = basePtr->vine;
-	auto NodeAndRange = getNodeAndRange(vinePtr, charToEncode);
-	Node* childNodePtr = NodeAndRange.first;
-	basePtr = childNodePtr;
-	if (childNodePtr->count > 1)
-		contextFound = true;
-	encoder.encode(NodeAndRange.second);
-
-	// Reduce context size and add character as node. 
-	while (vinePtr = vinePtr->vine)
-	{
-		NodeAndRange = getNodeAndRange(vinePtr, charToEncode);
-		Node* childNodePtr2 = NodeAndRange.first;
-
-		// Only encodes if the character has not been seen at higher order contexts.
-		if (!contextFound)
-			encoder.encode(NodeAndRange.second);
-
-		if (childNodePtr2->count > 1)
-			contextFound = true;
-		childNodePtr->vine = childNodePtr2;
-		childNodePtr = childNodePtr2;
-	}
-	childNodePtr->vine = rootPtr;
-
-	// If character was not seen at any contexts the -1 orderTable is used.
-	if (!contextFound)
-	{
-		ProbRange range;
-		range.character = charToEncode;
-		int cumCount = (int)charToEncode;
-		range.denom = config::TotalUniqueChars;
-		range.lower = cumCount;
-		range.upper = cumCount + 1;
-		encoder.encode(range);
-	}
-}
-
-pair<PPM::Node*, ProbRange> PPM::getNodeAndRange(PPM::Node* parentNode, const characterCode& charToEncode)
-{
-	ProbRange range;
-	CountingNodeTraverser traverser(parentNode);
-	Node* charNode = traverser.findNode(charToEncode);
-	int lower = traverser.count;
-	traverser.iterateToEnd();
-	int escapeCount = traverser.getEscapeCount();
-
-	if (charNode != nullptr)
-	{
-		range.lower = lower;
-		range.upper = lower + charNode->count;
-		range.character = charToEncode;
-	}
-	else
-	{
-		charNode = traverser.addNode(charToEncode);
-		range.lower = traverser.count;
-		range.upper = lower + escapeCount;
-		range.character = config::EscapeCharacter;
-	}
-
-	range.denom = traverser.count + escapeCount;
-	charNode->count++;
-	pair<PPM::Node*, ProbRange> pair(charNode, range);
-	return pair;
+	EncodingTraverser traverser(charToEncode, base, root, encoder);
 }
 
 characterCode PPM::decode(ArithmeticDecoder& decoder)
 {
+	return 0;
+	/*
 	// First node to be added will be updated as base node.
 	bool contextFound = false;
 	int count = 0;
@@ -142,11 +78,12 @@ characterCode PPM::decode(ArithmeticDecoder& decoder)
 	// Update all counts with decoded character.
 	update(charRange.character);
 	
-	return charRange.character;
+	return charRange.character;*/
 }
 
 void PPM::update(const characterCode& charToUpdate)
 {
+	/*
 	// First node to be added will be updated as base node.
 	Node* vinePtr = basePtr->vine;
 	NodeTraverser traverser(vinePtr);
@@ -166,13 +103,13 @@ void PPM::update(const characterCode& charToUpdate)
 		lastNodeAdded->vine = nodeAdded;
 		lastNodeAdded = nodeAdded;
 	}
-	lastNodeAdded->vine = rootPtr;
+	lastNodeAdded->vine = rootPtr;*/
 }
 
 PPM::PPM()
 {
 	Node* firstNode = new Node(config::EscapeCharacter);
-	rootPtr = firstNode;
+	root = firstNode;
 	for (int i = 0; i < config::MaxOrderSize + 1; i++)
 	{
 		Node* secondNode = new Node(config::EscapeCharacter);
@@ -180,49 +117,69 @@ PPM::PPM()
 		secondNode->vine = firstNode;
 		firstNode = secondNode;
 	}
-	basePtr = firstNode;
+	base = firstNode;
 }
 
-PPM::Node* PPM::NodeTraverser::findNode(const characterCode& charToFind)
+// NodeTraverser
+
+PPM::NodeTraverser::NodeTraverser(const characterCode& character, Node* base, Node* root) : character(character)
 {
-	Node* currentNode = *next;
-	while (currentNode != nullptr && currentNode->character != charToFind)
-		currentNode = traverse();
-	return currentNode;
+	vine = base->vine;
+	base = run();
+	Node* previousAdded = base;
+	while (vine = vine->vine)
+	{
+		previousAdded->vine = run();
+		previousAdded = previousAdded->vine;
+	}
+	previousAdded->vine = root;
 }
 
-PPM::Node* PPM::NodeTraverser::traverse()
+PPM::Node* PPM::NodeTraverser::run()
+{
+	next = &(vine->child);
+	while (*next != nullptr && (*next)->character != character)
+		traverse();
+	addNode();
+	return *next;
+}
+
+void PPM::NodeTraverser::traverse()
 {
 	next = &((*next)->sibling);
-	return *next;
 }
 
-PPM::Node* PPM::CountingNodeTraverser::traverse()
-{
-	escapeCount++;
-	count += (*next)->count;
-	return NodeTraverser::traverse();
-}
-
-PPM::Node* PPM::NodeTraverser::addNode(const characterCode& character)
+void PPM::NodeTraverser::addNode()
 {
 	*next = new Node(character);
-	return *next;
 }
 
-void PPM::NodeTraverser::iterateToEnd()
+// CountingNodeTraverser
+
+PPM::Node* PPM::CountingNodeTraverser::run()
 {
-	while (*next != nullptr)
-		traverse();
+	totalCount = vine->count - 1;
+	count = 0;
+	uniqueCount = 0;
+	return NodeTraverser::run();
 }
 
-int PPM::CountingNodeTraverser::getEscapeCount()
+void PPM::CountingNodeTraverser::traverse()
 {
+	uniqueCount++;
+	count += (*next)->count;
+	NodeTraverser::traverse();
+}
+
+int  PPM::CountingNodeTraverser::calculateEscapeCount()
+{
+	int escapeCount = uniqueCount;
+
 	if (escapeCount == 0)
 		escapeCount++;
 
 	// Escape count equals the total count divided by the number of different characters seen at the context.
-	escapeCount = count / escapeCount;
+	escapeCount = totalCount / escapeCount;
 
 	if (escapeCount == 0)
 		escapeCount++;
@@ -230,17 +187,39 @@ int PPM::CountingNodeTraverser::getEscapeCount()
 	//return escapeCount;
 }
 
-PPM::NodeTraverser::NodeTraverser(Node* parent)
+// EncodingTraverser
+
+void PPM::EncodingTraverser::addNode()
 {
-	next = &parent->child;
+	if (!contextFound)
+	{
+		int denom = totalCount + calculateEscapeCount();
+		if (*next == nullptr)
+		{
+			// Encode escape.
+			encode(denom, totalCount, denom, config::EscapeCharacter);
+
+			// Check vine == null then encode -1.
+			if (vine->vine == nullptr)
+				encode((character + 1), character, config::TotalUniqueChars, character);
+		}
+		else
+		{
+			// Encode character.
+			encode((count + (*next)->count), count, denom, character);
+		}
+	}
+	NodeTraverser::addNode();
 }
 
-PPM::CountingNodeTraverser::CountingNodeTraverser(Node* parent) : NodeTraverser(parent) {}
-
-#ifdef _DEBUG
-void PPM::outputDebug(ofstream& outputFileStream)
+void PPM::EncodingTraverser::encode(int upper, int lower, int denom, characterCode character)
 {
-
+	ProbRange range;
+	range.character = character;
+	range.lower = lower;
+	range.upper = upper;
+	range.denom = denom;
+	encoder.encode(range);
 }
-#endif
+
 
