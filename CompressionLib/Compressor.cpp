@@ -32,13 +32,6 @@ void Compressor::compress()
 		contextMixer.updateModels(character);
 
 	}
-
-#ifdef _DEBUG
-	outputFileStream.close();
-	outputFileStream.open(directory + "\\debug");
-#endif // _DEBUG
-
-
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)

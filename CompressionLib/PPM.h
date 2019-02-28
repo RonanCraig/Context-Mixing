@@ -15,11 +15,11 @@ class PPM : public Model
 struct Node
 {
 	characterCode character;
-	int count = 1;
+	int count;
 	Node* child = nullptr;
 	Node* sibling = nullptr;
 	Node* vine = nullptr;
-	Node(const characterCode& character) : character(character) {}
+	Node(const characterCode& character, int count = 1) : character(character), count(count) {}
 };
 
 class NodeTraverser
@@ -32,11 +32,11 @@ protected:
 
 // Methods
 public:
-	NodeTraverser(const characterCode& character, Node* base, Node* root);
+	virtual void traverse(const characterCode& character, Node** base, Node* root);
 	
 protected:
-	virtual Node* run();
-	virtual void traverse();
+	virtual Node* traverseChildren();
+	virtual void nextNode();
 	virtual void addNode();
 };
 
@@ -44,35 +44,46 @@ class CountingNodeTraverser : public NodeTraverser
 {
 // Attributes
 protected:
-	int uniqueCount = 0;
-	int count = 0;
 	int totalCount = 0;
-	bool contextFound = false;
+	int escapeCount = 0;
+	int uniqueCount = 0;
 
 // Methods
-public:
-	CountingNodeTraverser(const characterCode& character, Node* base, Node* root) : NodeTraverser(character, base, root) {}
-	
 protected:
-	virtual Node* run();
-	virtual void traverse();
-	int calculateEscapeCount();
-
+	void calculateTotalAndEscapeCounts();
 };
 
-class EncodingTraverser : CountingNodeTraverser
+class EncodingTraverser : public CountingNodeTraverser
 {
 // Attributes
 private:
 	ArithmeticEncoder& encoder;
+	int count = 0;
+	bool contextFound = false;
 
 // Methods
 public:
-	EncodingTraverser(const characterCode& character, Node* base, Node* root, ArithmeticEncoder& encoder) : CountingNodeTraverser(character, base, root), encoder(encoder) {}
-
+	EncodingTraverser(ArithmeticEncoder& encoder) : encoder(encoder) {}
 private:
 	void addNode();
 	void encode(int upper, int lower, int denom, characterCode character);
+	virtual Node* traverseChildren();
+	virtual void nextNode();
+};
+
+class DecodingTraverser : public CountingNodeTraverser
+{
+// Attributes
+private:
+	ArithmeticDecoder& decoder;
+
+// Methods
+public:
+	DecodingTraverser(ArithmeticDecoder& decoder) : decoder(decoder) {}
+	characterCode traverse(Node** base, Node* root);
+private:
+	void findCharacterForCount(int& charCount);
+	void decode(int upper, int lower, int denom, characterCode character);
 };
 
 // Attributes
@@ -91,9 +102,6 @@ public:
 	// Updates the counts for contexts.
 	void update(const characterCode& charToUpdate);
 	PPM();
-
-private:
-	std::pair<Node*, ProbRange> getNodeAndRange(Node* parentNode, const characterCode& charToEncode);
 
 };
 
