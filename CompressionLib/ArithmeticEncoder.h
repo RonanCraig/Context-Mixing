@@ -25,8 +25,9 @@ public:
 	void encode(const ProbRange& probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		upperBound = lowerBound + (probRange.upper * (range / probRange.denom));
-		lowerBound += probRange.lower * (range / probRange.denom);
+		unsigned int countRange = (range / probRange.denom);
+		upperBound = lowerBound + (probRange.upper * countRange);
+		lowerBound += probRange.lower * countRange;
 
 		renormalizeBounds();
 
@@ -62,6 +63,8 @@ private:
 			upperBound <<= 1;
 			upperBound++;
 			lowerBound <<= 1;
+			upperBound &= 0xFFFFFFFFU;
+			lowerBound &= 0xFFFFFFFFU;
 		}
 	}
 

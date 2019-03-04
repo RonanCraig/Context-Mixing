@@ -10,7 +10,7 @@ class Decompressor
 {
 // Attributes
 private:
-	compression::ContextMixer contextMixer;
+	ContextMixer* contextMixer;
 	std::string directory;
 
 // Methods

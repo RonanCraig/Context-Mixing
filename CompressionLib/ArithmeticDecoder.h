@@ -31,8 +31,9 @@ public:
 	void decode(ProbRange& probRange)
 	{
 		unsigned int range = upperBound - lowerBound;
-		upperBound = lowerBound + (probRange.upper * (range / probRange.denom));
-		lowerBound += probRange.lower * (range / probRange.denom);
+		unsigned int countRange = (range / probRange.denom);
+		upperBound = lowerBound + (probRange.upper * countRange);
+		lowerBound += probRange.lower * countRange;
 
 		renormalizeCode();
 		characterCode& c = probRange.character;
@@ -43,7 +44,7 @@ public:
 	int getCount(const int& totalCount)
 	{
 		unsigned int range = upperBound - lowerBound;
-		int count = (value - lowerBound) / (range / totalCount);
+		unsigned int count = (value - lowerBound) / (range / totalCount);
 		return count;
 	}
 private:

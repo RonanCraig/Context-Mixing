@@ -1,6 +1,6 @@
 #pragma once
-#include <memory>
 #include <string>
+#include <set>
 #include "Config.h"
 #include "Model.h"
 #include "ProbRange.h"
@@ -12,14 +12,25 @@ namespace compression
 class PPM : public Model
 {
 
-struct Node
+class Node
 {
-	characterCode character;
-	int count;
-	Node* child = nullptr;
-	Node* sibling = nullptr;
-	Node* vine = nullptr;
-	Node(const characterCode& character, int count = 1) : character(character), count(count) {}
+// Attributes
+private:
+	mutable bool totalCountEqualsCount = true;
+
+public:
+	mutable int count = 0;
+	const characterCode character;
+	mutable std::set<Node> children;
+	const mutable Node* vine = nullptr;
+
+// Methods
+public:
+	Node(const characterCode& character) : character(character) {}
+	int getTotalCount() const;
+	void increaseCount(const Node* parent) const;
+	bool operator=(Node& rhs) { return rhs.character == character; }
+	bool operator<(const Node& rhs) const { return character < rhs.character; }
 };
 
 class NodeTraverser
@@ -27,51 +38,39 @@ class NodeTraverser
 // Attributes
 protected:
 	characterCode character;
-	Node** next;
-	Node* vine;
+	const Node* vine;
+	const Node* root;
+	const Node* base;
+	byte depth = 0;
 
 // Methods
 public:
-	virtual void traverse(const characterCode& character, Node** base, Node* root);
+	NodeTraverser(Node& root, Node& base) : root(&root), base(&base) {}
+	virtual void traverse(const characterCode& character);
 	
 protected:
-	virtual Node* traverseChildren();
-	virtual void nextNode();
-	virtual void addNode();
+	void initialiseVine();
+	virtual const Node* updateNode();
+	int calculateEscapeCount();
 };
 
-class CountingNodeTraverser : public NodeTraverser
-{
-// Attributes
-protected:
-	int totalCount = 0;
-	int escapeCount = 0;
-	int uniqueCount = 0;
-
-// Methods
-protected:
-	void calculateTotalAndEscapeCounts();
-};
-
-class EncodingTraverser : public CountingNodeTraverser
+class EncodingTraverser : public NodeTraverser
 {
 // Attributes
 private:
 	ArithmeticEncoder& encoder;
-	int count = 0;
 	bool contextFound = false;
 
 // Methods
 public:
-	EncodingTraverser(ArithmeticEncoder& encoder) : encoder(encoder) {}
+	EncodingTraverser(Node& root, Node& base, ArithmeticEncoder& encoder) : NodeTraverser(root, base), encoder(encoder) {}
+	void traverse(const characterCode& character);
 private:
-	void addNode();
+	const Node* updateNode();
 	void encode(int upper, int lower, int denom, characterCode character);
-	virtual Node* traverseChildren();
-	virtual void nextNode();
 };
 
-class DecodingTraverser : public CountingNodeTraverser
+class DecodingTraverser : public NodeTraverser
 {
 // Attributes
 private:
@@ -79,29 +78,33 @@ private:
 
 // Methods
 public:
-	DecodingTraverser(ArithmeticDecoder& decoder) : decoder(decoder) {}
-	characterCode traverse(Node** base, Node* root);
+	DecodingTraverser(Node& root, Node& base, ArithmeticDecoder& decoder) : NodeTraverser(root, base), decoder(decoder) {}
+	characterCode traverse();
 private:
-	void findCharacterForCount(int& charCount);
 	void decode(int upper, int lower, int denom, characterCode character);
 };
 
 // Attributes
 private:
-	Node* base;
-	Node* root;
+	Node& base;
+	Node root;
+	NodeTraverser* traverser;
+	EncodingTraverser* encodingTraverser;
+	DecodingTraverser* decodingTraverser;
 
 // Methods
 public:
 	// Iterates through each context until the character has been seen before at that context or -1 context.
 	// Creates a probablilty range for the escape character if the character has not been seen before at that context.
 	// Creates a probability range for the character to encode if the character has been seen before.
-	void encode(const characterCode& charToEncode, ArithmeticEncoder& encoder);
+	void encode(const characterCode& charToEncode);
 	// Similar to encode except uses code instead of character to find ranges.
-	characterCode decode(ArithmeticDecoder& decoder);
+	characterCode decode();
 	// Updates the counts for contexts.
 	void update(const characterCode& charToUpdate);
 	PPM();
+	PPM(ArithmeticEncoder& encoder);
+	PPM(ArithmeticDecoder& decoder);
 
 };
 

@@ -8,13 +8,9 @@ namespace compression
 class Model
 {
 public:
-	virtual void encode(const characterCode& charToEncode, ArithmeticEncoder& encoder) {}
-	virtual characterCode decode(ArithmeticDecoder& decoder) { return ' '; }
+	virtual void encode(const characterCode& charToEncode) {}
+	virtual characterCode decode() { return ' '; }
 	virtual void update(const characterCode& charToUpdate) {}
-#ifdef _DEBUG
-	virtual void outputDebug(std::ofstream& outputFileStream) {}
-#endif // _DEBUG
-
 };
 
 }

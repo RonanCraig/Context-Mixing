@@ -8,10 +8,7 @@ using namespace compression;
 
 void Compressor::compress()
 {
-	basic_ofstream<byte> outputFileStream(directory + "\\code", ios::binary);
 	basic_ifstream<byte> inputFileStream(directory + "\\" + config::inputfile);
-
-	ArithmeticEncoder encoder(outputFileStream);
 
 	// Main loop, compressing each character individually.
 	bool finished = false;
@@ -27,14 +24,23 @@ void Compressor::compress()
 		else
 			character = (characterCode)c;
 
-		Model& model = contextMixer.getBestModel();
-		model.encode(character, encoder);
-		contextMixer.updateModels(character);
+		Model& model = contextMixer->getBestModel();
+		model.encode(character);
+		contextMixer->updateModels(character);
 
 	}
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)
 {
+	basic_ofstream<byte> outputFileStream(directory + "\\code", ios::binary);
+
+	ArithmeticEncoder* encoder = new ArithmeticEncoder(outputFileStream);
+
+	vector<Model*>* models = new vector<Model*>;
+	models->push_back(new PPM(*encoder));
+
+	contextMixer = new ContextMixer(*models);
+
 	compress();
 }

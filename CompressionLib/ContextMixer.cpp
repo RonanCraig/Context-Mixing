@@ -5,16 +5,12 @@ using namespace compression;
 
  Model& ContextMixer::getBestModel()
 {
-	 return ppm;
+	 return *models[0];
 }
 
  void ContextMixer::updateModels(const characterCode& charToUpdate)
  {
-
+	 
  }
 
- ContextMixer::ContextMixer()
- {
-	 models.push_back(&ppm);
- }
 

@@ -9,7 +9,7 @@ namespace compression
 class Compressor
 {
 private:
-	compression::ContextMixer contextMixer;
+	ContextMixer* contextMixer;
 	std::string directory;
 
 public:
