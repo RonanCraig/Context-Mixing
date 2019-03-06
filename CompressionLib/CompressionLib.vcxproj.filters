@@ -39,7 +39,13 @@
     <ClInclude Include="Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProbRange.h">
+    <ClInclude Include="Arithmetic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelMetrics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CompressionTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

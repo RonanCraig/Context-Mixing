@@ -1,50 +1,53 @@
 #pragma once
 #include <fstream>
-#include <map>
-#include <string>
-#include "ProbRange.h"
+#include "Arithmetic.h"
+#include "CompressionTypes.h"
 
 namespace compression
 {
 
-class ArithmeticDecoder
+class ArithmeticDecoder : public Arithmetic
 {
 private:
-	unsigned int upperBound = 0xFFFFFFFFU;
-	unsigned int lowerBound = 0;
-	unsigned int value = 0;
-	std::basic_ifstream<byte>& inputFileStream;
-	std::basic_ofstream<byte>& outputFileStream;
+	ModelMetrics::CODE_VALUE upperBound = ModelMetrics::MAX_CODE;
+	ModelMetrics::CODE_VALUE lowerBound = 0;
+	ModelMetrics::CODE_VALUE value = 0;
 
-	byte buffer = 0;
+	std::basic_ifstream <types::byte> & inputFileStream;
+	std::basic_ofstream<types::byte>& outputFileStream;
+
+	types::byte buffer = 0;
 	int current_bit = 8;
 public:
-	ArithmeticDecoder(std::basic_ifstream<byte>& inputFileStream, std::basic_ofstream<byte>& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
+	ArithmeticDecoder(std::basic_ifstream<types::byte>& inputFileStream, std::basic_ofstream<types::byte>& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
 	{
-		for (int i = 0; i < 32; i++)
+		for (int i = 0; i < ModelMetrics::CODE_VALUE_BITS; i++)
 		{
 			value <<= 1;
 			value += getNextBit();
 		}
 	}
 
-	void decode(ProbRange& probRange)
+	void decode(ModelMetrics::ProbRange& probRange)
 	{
-		unsigned int range = upperBound - lowerBound;
-		unsigned int countRange = (range / probRange.denom);
-		upperBound = lowerBound + (probRange.upper * countRange);
-		lowerBound += probRange.lower * countRange;
+		//if (probRange.denom >= ModelMetrics::MAX_FREQ)
+			//probRange = getEvenlyDistributedProbRange(probRange.character);
+
+		types::characterCode& c = probRange.character;
+		if (c < ModelMetrics::TotalUniqueChars - 1)
+			outputFileStream << (types::byte)probRange.character;
+
+		ModelMetrics::CODE_VALUE range = upperBound - lowerBound + 1;
+		upperBound = lowerBound + (range*probRange.upper) / probRange.denom - 1;
+		lowerBound = lowerBound + (range*probRange.lower) / probRange.denom;
 
 		renormalizeCode();
-		characterCode& c = probRange.character;
-		if(c != config::EscapeCharacter && c != config::EndCharacter)
-			outputFileStream << (byte)probRange.character;
 	}
 
-	int getCount(const int& totalCount)
+	ModelMetrics::CODE_VALUE getCount(const ModelMetrics::CODE_VALUE& totalCount)
 	{
-		unsigned int range = upperBound - lowerBound;
-		unsigned int count = (value - lowerBound) / (range / totalCount);
+		ModelMetrics::CODE_VALUE range = upperBound - lowerBound + 1;
+		ModelMetrics::CODE_VALUE count = ((value - lowerBound + 1) * totalCount - 1) / range;
 		return count;
 	}
 private:
@@ -52,16 +55,18 @@ private:
 	{
 		while (true)
 		{
-			if (upperBound < 0x80000000U) {} //do nothing, bit is a zero
-			else if (lowerBound >= 0x80000000U) {
-				value -= 0x80000000U;  //subtract one half from all three code values
-				lowerBound -= 0x80000000U;
-				upperBound -= 0x80000000U;
+			if (upperBound < ONE_HALF) {} //do nothing, bit is a zero
+			else if (lowerBound >= ONE_HALF) 
+			{
+				value -= ONE_HALF;  //subtract one half from all three code values
+				lowerBound -= ONE_HALF;
+				upperBound -= ONE_HALF;
 			}
-			else if (lowerBound >= 0x40000000 && upperBound < 0xC0000000U) {
-				value -= 0x40000000;
-				lowerBound -= 0x40000000;
-				upperBound -= 0x40000000;
+			else if (lowerBound >= ONE_FOURTH && upperBound < THREE_FOURTHS) 
+			{
+				value -= ONE_FOURTH;
+				lowerBound -= ONE_FOURTH;
+				upperBound -= ONE_FOURTH;
 			}
 			else
 				break;

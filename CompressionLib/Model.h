@@ -1,17 +1,20 @@
 #pragma once
-#include "ArithmeticEncoder.h"
-#include "ArithmeticDecoder.h"
+#include "CompressionTypes.h"
 
 namespace compression
 {
 
 class Model
 {
+
+// Methods
 public:
-	virtual void encode(const characterCode& charToEncode) {}
-	virtual characterCode decode() { return ' '; }
-	virtual void update(const characterCode& charToUpdate) {}
+	virtual void encode(const types::characterCode& charToEncode) {}
+	virtual types::characterCode decode() { return ' '; }
+	virtual void update(const types::characterCode& charToUpdate) {}
+
 };
 
 }
+
 

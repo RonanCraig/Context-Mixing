@@ -1,10 +1,12 @@
 #include "Compressor.h"
 #include "ArithmeticEncoder.h"
 #include "Config.h"
-#include "Model.h"
+#include "PPM.h"
+#include "CompressionTypes.h"
 
 using namespace std;
 using namespace compression;
+using namespace types;
 
 void Compressor::compress()
 {
@@ -19,7 +21,7 @@ void Compressor::compress()
 		if (!inputFileStream.get(c))
 		{
 			finished = true;
-			character = config::EndCharacter;
+			character = ModelMetrics::EndCharacter;
 		}
 		else
 			character = (characterCode)c;

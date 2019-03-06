@@ -2,15 +2,17 @@
 #include "ArithmeticDecoder.h"
 #include "Config.h"
 #include "Model.h"
+#include "PPM.h"
 
 using namespace std;
 using namespace compression;
+using namespace types;
 
 void Decompressor::decompress()
 {
 	characterCode decodedChar = (characterCode)' ';
 	
-	while (decodedChar != config::EndCharacter)
+	while (decodedChar != ModelMetrics::EndCharacter)
 	{
 		Model& model = contextMixer->getBestModel();
 		decodedChar = model.decode();

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "Model.h"
-#include "PPM.h"
+#include "CompressionTypes.h"
 
 namespace compression
 {
@@ -15,7 +15,7 @@ private:
 // Methods
 public:
 	Model& getBestModel();
-	void updateModels(const characterCode& charToUpdate);
+	void updateModels(const types::characterCode& charToUpdate);
 	ContextMixer(std::vector<Model*>& models) : models(models) {}
 };
 

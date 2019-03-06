@@ -2,6 +2,7 @@
 
 using namespace std;
 using namespace compression;
+using namespace types;
 
  Model& ContextMixer::getBestModel()
 {

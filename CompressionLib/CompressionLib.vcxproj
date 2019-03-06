@@ -116,15 +116,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Arithmetic.h" />
     <ClInclude Include="ArithmeticDecoder.h" />
     <ClInclude Include="ArithmeticEncoder.h" />
+    <ClInclude Include="CompressionTypes.h" />
     <ClInclude Include="Compressor.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ContextMixer.h" />
     <ClInclude Include="Decompressor.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="ModelMetrics.h" />
     <ClInclude Include="PPM.h" />
-    <ClInclude Include="ProbRange.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Compressor.cpp" />
