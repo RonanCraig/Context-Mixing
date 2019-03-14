@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
+#include <assert.h>
 #include "Arithmetic.h"
-#include "CompressionTypes.h"
 
 namespace compression
 {
@@ -9,45 +9,39 @@ namespace compression
 class ArithmeticDecoder : public Arithmetic
 {
 private:
-	ModelMetrics::CODE_VALUE upperBound = ModelMetrics::MAX_CODE;
-	ModelMetrics::CODE_VALUE lowerBound = 0;
-	ModelMetrics::CODE_VALUE value = 0;
+	CODE_VALUE upperBound = MAX_CODE;
+	CODE_VALUE lowerBound = 0;
+	CODE_VALUE value = 0;
 
 	std::basic_ifstream <types::byte> & inputFileStream;
-	std::basic_ofstream<types::byte>& outputFileStream;
 
 	types::byte buffer = 0;
 	int current_bit = 8;
 public:
-	ArithmeticDecoder(std::basic_ifstream<types::byte>& inputFileStream, std::basic_ofstream<types::byte>& outputFileStream) : inputFileStream(inputFileStream), outputFileStream(outputFileStream)
+	ArithmeticDecoder(std::basic_ifstream<types::byte>& inputFileStream) : inputFileStream(inputFileStream)
 	{
-		for (int i = 0; i < ModelMetrics::CODE_VALUE_BITS; i++)
+		for (int i = 0; i < CODE_VALUE_BITS; i++)
 		{
 			value <<= 1;
 			value += getNextBit();
 		}
 	}
 
-	void decode(ModelMetrics::ProbRange& probRange)
+	void decode(types::ProbRange& probRange)
 	{
-		//if (probRange.denom >= ModelMetrics::MAX_FREQ)
-			//probRange = getEvenlyDistributedProbRange(probRange.character);
+		assert(probRange.denom < MAX_FREQ);
 
-		types::characterCode& c = probRange.character;
-		if (c < ModelMetrics::TotalUniqueChars - 1)
-			outputFileStream << (types::byte)probRange.character;
-
-		ModelMetrics::CODE_VALUE range = upperBound - lowerBound + 1;
+		CODE_VALUE range = upperBound - lowerBound + 1;
 		upperBound = lowerBound + (range*probRange.upper) / probRange.denom - 1;
 		lowerBound = lowerBound + (range*probRange.lower) / probRange.denom;
 
 		renormalizeCode();
 	}
 
-	ModelMetrics::CODE_VALUE getCount(const ModelMetrics::CODE_VALUE& totalCount)
+	CODE_VALUE getCount(const CODE_VALUE& totalCount)
 	{
-		ModelMetrics::CODE_VALUE range = upperBound - lowerBound + 1;
-		ModelMetrics::CODE_VALUE count = ((value - lowerBound + 1) * totalCount - 1) / range;
+		CODE_VALUE range = upperBound - lowerBound + 1;
+		CODE_VALUE count = ((value - lowerBound + 1) * totalCount - 1) / range;
 		return count;
 	}
 private:

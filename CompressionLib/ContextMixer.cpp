@@ -4,12 +4,12 @@ using namespace std;
 using namespace compression;
 using namespace types;
 
- Model& ContextMixer::getBestModel()
+ Model* ContextMixer::getBestModel()
 {
-	 return *models[0];
+	 return models[0];
 }
 
- void ContextMixer::updateModels(const characterCode& charToUpdate)
+ void ContextMixer::updateModels(const characterType& charToUpdate)
  {
 	 
  }

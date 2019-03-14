@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
+#include <assert.h>
 #include "Arithmetic.h"
-#include "CompressionTypes.h"
 
 namespace compression
 {
@@ -10,8 +10,8 @@ class ArithmeticEncoder : public Arithmetic
 {
 private:
 	// Represents numberline of 1s
-	ModelMetrics::CODE_VALUE lowerBound = 0;
-	ModelMetrics::CODE_VALUE upperBound = ModelMetrics::MAX_CODE;
+	CODE_VALUE lowerBound = 0;
+	CODE_VALUE upperBound = MAX_CODE;
 
 	int pending_bits = 0;
 	std::basic_ofstream<types::byte>& outputFileStream;
@@ -23,26 +23,26 @@ private:
 public:
 	ArithmeticEncoder(std::basic_ofstream<types::byte>& outputFileStream) : outputFileStream(outputFileStream) {}
 
-	void encode(ModelMetrics::ProbRange& probRange)
+	void encode(types::ProbRange& probRange)
 	{
-		if (probRange.denom >= ModelMetrics::MAX_FREQ)
-			int a = 5;
-		ModelMetrics::CODE_VALUE range = upperBound - lowerBound + 1;
+		assert(probRange.denom < MAX_FREQ);
+		CODE_VALUE range = upperBound - lowerBound + 1;
 		upperBound = lowerBound + (range * probRange.upper / probRange.denom) - 1;
 		lowerBound = lowerBound + (range * probRange.lower / probRange.denom);
 
 		renormalizeBounds();
+	}
 
-		// Character representing end of encoding.
-		if (probRange.character == ModelMetrics::EndCharacter)
-		{
-			pending_bits++;
-			if (lowerBound < ONE_FOURTH)
-				output_bit_plus_pending(0);
-			else
-				output_bit_plus_pending(1);
-			flushBuffer();
-		}
+	void end()
+	{
+		// TODO: end encode
+		pending_bits++;
+		if (lowerBound < ONE_FOURTH)
+			output_bit_plus_pending(0);
+		else
+			output_bit_plus_pending(1);
+		
+		flushBuffer();
 	}
 
 private:
@@ -65,8 +65,8 @@ private:
 			upperBound <<= 1;
 			upperBound++;
 			lowerBound <<= 1;
-			upperBound &= ModelMetrics::MAX_CODE;
-			lowerBound &= ModelMetrics::MAX_CODE;
+			upperBound &= MAX_CODE;
+			lowerBound &= MAX_CODE;
 		}
 	}
 

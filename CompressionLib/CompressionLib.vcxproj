@@ -125,7 +125,6 @@
     <ClInclude Include="ContextMixer.h" />
     <ClInclude Include="Decompressor.h" />
     <ClInclude Include="Model.h" />
-    <ClInclude Include="ModelMetrics.h" />
     <ClInclude Include="PPM.h" />
   </ItemGroup>
   <ItemGroup>

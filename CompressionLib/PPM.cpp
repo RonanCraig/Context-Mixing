@@ -1,30 +1,27 @@
 #include "PPM.h"
 #include <fstream>
 #include <set>
-#include "CompressionTypes.h"
-#include "ModelMetrics.h"
 
 using namespace std;
 using namespace compression;
 using namespace types;
-using namespace ModelMetrics;
 
-void PPM::encode(const characterCode& charToEncode)
+void PPM::encode(const characterType& charToEncode)
 {
 	encodingTraverser->traverse(charToEncode);
 }
 
-characterCode PPM::decode()
+characterType PPM::decode()
 {
 	return decodingTraverser->traverse();
 }
 
-void PPM::update(const characterCode& charToUpdate)
+void PPM::update(const characterType& charToUpdate)
 {
 	traverser->traverse(charToUpdate);
 }
 
-PPM::PPM() : root(Node(EscapeCharacter)), base(root)
+PPM::PPM() : root(Node(0)), base(root)
 {
 	traverser = new NodeTraverser(root, base);
 }
@@ -41,14 +38,8 @@ PPM::PPM(ArithmeticDecoder& decoder) : PPM()
 
 // NodeTraverser
 
-void PPM::NodeTraverser::traverse(const characterCode& character)
+void PPM::NodeTraverser::traverse(const characterType& character)
 {
-	if (root->count == 3087217)
-	//if (character == config::EndCharacter)
-	{
-		int a = 5;
-		//return;
-	}
 	this->character = character;
 	initialiseVine();
 	
@@ -74,18 +65,32 @@ void PPM::NodeTraverser::initialiseVine()
 		vine = base->vine;
 }
 
+void PPM::NodeTraverser::reduceCounts()
+{
+	for (auto it = vine->children.begin(); it != vine->children.end(); it++)
+	{
+		it->count = it->count / 2;
+		if (it->count == 0)
+			it->count++;
+	}
+		
+}
+
 const PPM::Node* PPM::NodeTraverser::updateNode()
 {
 	// TODO: Maybe make function take iterator as parameter.
+	
 	auto it = vine->children.insert(Node(character));
 	const Node* updatedNode = &(*(it.first));
+	if (updatedNode->count == Arithmetic::MAX_COUNT)
+		reduceCounts();
 	updatedNode->increaseCount(vine);
 	return updatedNode;
 }
 
 // EncodingTraverser
 
-void PPM::EncodingTraverser::traverse(const characterCode& character)
+void PPM::EncodingTraverser::traverse(const characterType& character)
 {
 	contextFound = false;
 	NodeTraverser::traverse(character);
@@ -95,10 +100,10 @@ const PPM::Node* PPM::EncodingTraverser::updateNode()
 {
 	if (!contextFound)
 	{
-		CODE_VALUE cumulativeCount = 0;
-		CODE_VALUE escapeCount = calculateEscapeCount();
-		CODE_VALUE totalCount = vine->getTotalCount();
-		CODE_VALUE denom = totalCount + escapeCount;
+		countType cumulativeCount = 0;
+		countType escapeCount = calculateEscapeCount();
+		countType totalCount = vine->getTotalCount();
+		countType denom = totalCount + escapeCount;
 
 		auto it = vine->children.begin();
 		for (it; it != vine->children.end() && it->character != character; it++)
@@ -107,33 +112,33 @@ const PPM::Node* PPM::EncodingTraverser::updateNode()
 		if (it == vine->children.end())
 		{
 			// Encode escape.
-			encode(denom, totalCount, denom, EscapeCharacter);
+			encode(denom, totalCount, denom);
 
 			// Check vine == null then encode -1.
 			if (vine->vine == nullptr)
-				encode((character + 1), character, TotalUniqueChars, character);
+				encode((character + 1), character, Arithmetic::TOTAL_UNIQUE_CHARS);
 		}
 		else
 		{
 			contextFound = true;
 			// Encode character.
-			encode(cumulativeCount + it->count, cumulativeCount, denom, character);
+			encode(cumulativeCount + it->count, cumulativeCount, denom);
 		}
 	}
 	return NodeTraverser::updateNode();
 }
 
-CODE_VALUE PPM::NodeTraverser::calculateEscapeCount()
+countType PPM::NodeTraverser::calculateEscapeCount()
 {
-	CODE_VALUE uniqueCount = vine->children.size();
-	CODE_VALUE escapeCount = vine->getTotalCount() / ((uniqueCount < 1) ? 1 : uniqueCount);
+	countType uniqueCount = vine->children.size();
+	countType escapeCount = vine->getTotalCount() / ((uniqueCount < 1) ? 1 : uniqueCount);
+	return 1;
 	return ((escapeCount < 1) ? 1 : escapeCount);
 }
 
-void PPM::EncodingTraverser::encode(CODE_VALUE upper, CODE_VALUE lower, CODE_VALUE denom, characterCode character)
+void PPM::EncodingTraverser::encode(countType upper, countType lower, countType denom)
 {
 	ProbRange range;
-	range.character = character;
 	range.lower = lower;
 	range.upper = upper;
 	range.denom = denom;
@@ -142,7 +147,7 @@ void PPM::EncodingTraverser::encode(CODE_VALUE upper, CODE_VALUE lower, CODE_VAL
 
 // DecodingTraverser
 
-characterCode PPM::DecodingTraverser::traverse()
+characterType PPM::DecodingTraverser::traverse()
 {
 	// TODO: make it better.
 	byte temp = depth;
@@ -150,45 +155,45 @@ characterCode PPM::DecodingTraverser::traverse()
 	depth = temp;
 
 	bool found = false;
-	characterCode charToUpdate;
+	characterType charToUpdate;
 	while (vine && !found)
 	{
-		CODE_VALUE escapeCount = calculateEscapeCount();
-		CODE_VALUE totalCount = vine->getTotalCount();
-		CODE_VALUE denom = totalCount + escapeCount;
-		CODE_VALUE charCount = decoder.getCount(denom);
+		countType escapeCount = calculateEscapeCount();
+		countType totalCount = vine->getTotalCount();
+		countType denom = totalCount + escapeCount;
+		countType charCount = decoder.getCount(denom);
 
 		if (charCount >= totalCount)
 		{
-			decode(denom, totalCount, denom, EscapeCharacter);
+			decode(denom, totalCount, denom);
 			if (vine->vine == nullptr)
 			{
-				charCount = decoder.getCount(TotalUniqueChars);
-				decode(charCount + 1, charCount, TotalUniqueChars, charCount);
+				charCount = decoder.getCount(Arithmetic::TOTAL_UNIQUE_CHARS);
 				charToUpdate = charCount;
+				decode(charCount + 1, charCount, Arithmetic::TOTAL_UNIQUE_CHARS);
 			}
 		}
 		else
 		{
 			found = true;
-			CODE_VALUE cumulativeCount = 0;
+			countType cumulativeCount = 0;
 			auto it = vine->children.begin();
 			for (it; it != vine->children.end() && cumulativeCount + it->count <= charCount; it++)
 				cumulativeCount += it->count;
 
 			charToUpdate = it->character;
-			decode(cumulativeCount + it->count, cumulativeCount, denom, charToUpdate);
+			decode(cumulativeCount + it->count, cumulativeCount, denom);
 		}
 		vine = vine->vine;
 	}
+
 	NodeTraverser::traverse(charToUpdate);
 	return charToUpdate;
 }
 
-void PPM::DecodingTraverser::decode(CODE_VALUE upper, CODE_VALUE lower, CODE_VALUE denom, characterCode character)
+void PPM::DecodingTraverser::decode(countType upper, countType lower, countType denom)
 {
 	ProbRange range;
-	range.character = character;
 	range.lower = lower;
 	range.upper = upper;
 	range.denom = denom;
@@ -204,7 +209,7 @@ void PPM::Node::increaseCount(const Node* parent) const
 	parent->totalCountEqualsCount = true;
 }
 
-CODE_VALUE PPM::Node::getTotalCount() const
+countType PPM::Node::getTotalCount() const
 {
 	if (totalCountEqualsCount)
 		return count;

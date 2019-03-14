@@ -14,8 +14,8 @@ private:
 
 // Methods
 public:
-	Model& getBestModel();
-	void updateModels(const types::characterCode& charToUpdate);
+	Model* getBestModel();
+	void updateModels(const types::characterType& charToUpdate);
 	ContextMixer(std::vector<Model*>& models) : models(models) {}
 };
 
