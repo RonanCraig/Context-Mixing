@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <set>
 #include "Model.h"
 #include "ArithmeticEncoder.h"
 #include "ArithmeticDecoder.h"
@@ -15,32 +14,60 @@ class PPM : public Model
 class Node
 {
 // Attributes
-private:
-	mutable bool totalCountEqualsCount = true;
-
 public:
-	mutable types::node::countType count = 0;
+	types::node::countType count = 0;
 	const types::node::characterType character;
-	mutable std::set<Node> children;
-	const mutable Node* vine = nullptr;
+	Node* child = nullptr;
+	Node* sibling = nullptr;
+	Node* vine = nullptr;
 
 // Methods
 public:
 	Node(const types::byte& character) : character(character) {}
-	types::countType getTotalCount() const;
-	void increaseCount(const Node* parent) const;
 	bool operator=(Node& rhs) { return rhs.character == character; }
-	bool operator<(const Node& rhs) const { return character < rhs.character; }
 };
 
 class NodeTraverser
 {
+
+protected:
+class SiblingTraverser
+{
+// Attributes
+public:
+	Node** iterator;
+// Methods
+protected:
+	SiblingTraverser() {};
+public:
+	SiblingTraverser(Node* parent, Node** startNode, const types::characterType& character) { insertNode(parent, startNode, character); }
+	void insertNode(Node* parent, Node** startNode, const types::characterType& character);
+};
+
+class CountingSiblingTraverser : public SiblingTraverser
+{
+	// Attributes
+public:
+	types::countType cumulativeCount = 0;
+	types::countType totalCount = 0;
+	types::countType uniqueCount = 0;
+	// Methods
+public:
+	CountingSiblingTraverser(Node** startNode, const types::characterType& character) { iterator = startNode; countToEnd(character); }
+	CountingSiblingTraverser(Node** startNode) { iterator = startNode; countToEnd(); }
+	void countToCount(Node** startNode, const types::countType& count);
+private:
+	void countToEnd(const types::characterType& character);
+	void countToEnd();
+	void next();
+};
+
 // Attributes
 protected:
 	types::characterType character;
-	const Node* vine;
-	const Node* root;
-	const Node* base;
+	Node* vine;
+	Node* root;
+	Node* base;
 	types::byte depth = 0;
 
 // Methods
@@ -50,13 +77,13 @@ public:
 	
 protected:
 	void initialiseVine();
-	void reduceCounts();
-	virtual const Node* updateNode();
-	types::countType calculateEscapeCount();
+	virtual Node* updateNode();
+	types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 };
 
 class EncodingTraverser : public NodeTraverser
 {
+
 // Attributes
 private:
 	ArithmeticEncoder& encoder;
@@ -67,7 +94,7 @@ public:
 	EncodingTraverser(Node& root, Node& base, ArithmeticEncoder& encoder) : NodeTraverser(root, base), encoder(encoder) {}
 	void traverse(const types::characterType& character);
 private:
-	const Node* updateNode();
+	Node* updateNode();
 	void encode(types::countType upper, types::countType lower, types::countType denom);
 };
 
@@ -87,7 +114,7 @@ private:
 
 // Attributes
 private:
-	static const int MaxOrderSize = 4; // Max size of order used by PPM.
+	static const int MaxOrderSize = 6; // Max size of order used by PPM.
 	Node& base;
 	Node root;
 	NodeTraverser* traverser;
