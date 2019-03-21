@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <vector>
+#include <list>
 #include "Model.h"
 #include "ArithmeticEncoder.h"
 #include "ArithmeticDecoder.h"
@@ -10,6 +12,41 @@ namespace compression
 
 class PPM : public Model
 {
+
+class Exclusions
+{
+	bool exclusions[256];
+	struct Node
+	{
+		Node* next;
+		types::node::characterType character;
+		Node(Node* next, types::node::characterType character) : next(next), character(character) {}
+	};
+	Node* start = nullptr;
+public:
+	bool add(types::node::characterType characterToExclude)
+	{
+		bool* exclusionPointer = &exclusions[characterToExclude];
+		bool exclusion = *exclusionPointer;
+		if (!exclusion)
+		{
+			*exclusionPointer = true;
+			Node* newNode = new Node(start, characterToExclude);
+			start = newNode;
+		}
+		return exclusion;
+	}
+	void resetExclusions()
+	{
+		while (start != nullptr)
+		{
+			exclusions[start->character] = false;
+			Node* next = start->next;
+			delete start;
+			start = next;
+		}
+	}
+};
 
 class Node
 {
@@ -23,6 +60,7 @@ public:
 
 // Methods
 public:
+	Node() : character(0) {}
 	Node(const types::byte& character) : character(character) {}
 	bool operator=(Node& rhs) { return rhs.character == character; }
 };
@@ -47,14 +85,16 @@ public:
 class CountingSiblingTraverser : public SiblingTraverser
 {
 	// Attributes
+private:
+	Exclusions& exclusions;
 public:
 	types::countType cumulativeCount = 0;
 	types::countType totalCount = 0;
 	types::countType uniqueCount = 0;
 	// Methods
 public:
-	CountingSiblingTraverser(Node** startNode, const types::characterType& character) { iterator = startNode; countToEnd(character); }
-	CountingSiblingTraverser(Node** startNode) { iterator = startNode; countToEnd(); }
+	CountingSiblingTraverser(Node** startNode, Exclusions& exclusions, const types::characterType& character) : exclusions(exclusions) { iterator = startNode; countToEnd(character); }
+	CountingSiblingTraverser(Node** startNode, Exclusions& exclusions) : exclusions(exclusions) { iterator = startNode; countToEnd(); }
 	void countToCount(Node** startNode, const types::countType& count);
 private:
 	void countToEnd(const types::characterType& character);
@@ -64,15 +104,18 @@ private:
 
 // Attributes
 protected:
+	Exclusions exclusions;
+	//std::list<int> exclusionsToReset;
 	types::characterType character;
 	Node* vine;
 	Node* root;
 	Node* base;
+	int maxOrderSize;
 	types::byte depth = 0;
 
 // Methods
 public:
-	NodeTraverser(Node& root, Node& base) : root(&root), base(&base) {}
+	NodeTraverser(Node& root, Node& base, int order) : root(&root), base(&base), maxOrderSize(order) {}
 	virtual void traverse(const types::characterType& character);
 	
 protected:
@@ -91,7 +134,7 @@ private:
 
 // Methods
 public:
-	EncodingTraverser(Node& root, Node& base, ArithmeticEncoder& encoder) : NodeTraverser(root, base), encoder(encoder) {}
+	EncodingTraverser(Node& root, Node& base, ArithmeticEncoder& encoder, int order) : NodeTraverser(root, base, order), encoder(encoder) { /*exclusions = std::vector<bool>(256, false);*/ }
 	void traverse(const types::characterType& character);
 private:
 	Node* updateNode();
@@ -106,7 +149,7 @@ private:
 
 // Methods
 public:
-	DecodingTraverser(Node& root, Node& base, ArithmeticDecoder& decoder) : NodeTraverser(root, base), decoder(decoder) {}
+	DecodingTraverser(Node& root, Node& base, ArithmeticDecoder& decoder, int order) : NodeTraverser(root, base, order), decoder(decoder) { /*exclusions = std::vector<bool>(256, false);*/ }
 	types::characterType traverse();
 private:
 	void decode(types::countType upper, types::countType lower, types::countType denom);
@@ -114,9 +157,8 @@ private:
 
 // Attributes
 private:
-	static const int MaxOrderSize = 6; // Max size of order used by PPM.
 	Node& base;
-	Node root;
+	static Node root;
 	NodeTraverser* traverser;
 	EncodingTraverser* encodingTraverser;
 	DecodingTraverser* decodingTraverser;
@@ -131,9 +173,9 @@ public:
 	types::characterType decode();
 	// Updates the counts for contexts.
 	void update(const types::characterType& charToUpdate);
-	PPM();
-	PPM(ArithmeticEncoder& encoder);
-	PPM(ArithmeticDecoder& decoder);
+	PPM(int order);
+	PPM(ArithmeticEncoder& encoder, int order);
+	PPM(ArithmeticDecoder& decoder, int order);
 
 };
 

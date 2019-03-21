@@ -3,6 +3,6 @@
 
 namespace config
 {
-	const std::string inputfile = "input";
+	const std::string inputfile = "enwik8";
 }
 

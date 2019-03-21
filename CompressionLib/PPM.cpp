@@ -21,19 +21,19 @@ void PPM::update(const characterType& charToUpdate)
 	traverser->traverse(charToUpdate);
 }
 
-PPM::PPM() : root(Node(0)), base(root)
+PPM::PPM(int order) : base(root)
 {
-	traverser = new NodeTraverser(root, base);
+	traverser = new NodeTraverser(root, base, order);
 }
 
-PPM::PPM(ArithmeticEncoder& encoder) : PPM()
+PPM::PPM(ArithmeticEncoder& encoder, int order) : PPM(order)
 {
-	encodingTraverser = new EncodingTraverser(root, base, encoder);
+	encodingTraverser = new EncodingTraverser(root, base, encoder, order);
 }
 
-PPM::PPM(ArithmeticDecoder& decoder) : PPM()
+PPM::PPM(ArithmeticDecoder& decoder, int order) : PPM(order)
 {
-	decodingTraverser = new DecodingTraverser(root, base, decoder);
+	decodingTraverser = new DecodingTraverser(root, base, decoder, order);
 }
 
 // NodeTraverser
@@ -56,7 +56,7 @@ void PPM::NodeTraverser::traverse(const characterType& character)
 
 void PPM::NodeTraverser::initialiseVine()
 {
-	if (depth <= MaxOrderSize)
+	if (depth <= maxOrderSize)
 	{
 		vine = base;
 		depth++;
@@ -101,6 +101,7 @@ void PPM::NodeTraverser::SiblingTraverser::insertNode(Node* parent, Node** start
 void PPM::EncodingTraverser::traverse(const characterType& character)
 {
 	contextFound = false;
+	exclusions.resetExclusions();
 	NodeTraverser::traverse(character);
 }
 
@@ -108,7 +109,7 @@ PPM::Node* PPM::EncodingTraverser::updateNode()
 {
 	if (!contextFound)
 	{
-		CountingSiblingTraverser traverser(&(vine->child), character);
+		CountingSiblingTraverser traverser(&(vine->child), exclusions, character);
 		countType denom = traverser.totalCount + calculateEscapeCount(traverser.uniqueCount, traverser.totalCount);
 		Node* characterNode = *(traverser.iterator);
 
@@ -175,15 +176,34 @@ void PPM::EncodingTraverser::CountingSiblingTraverser::countToCount(Node** start
 {
 	totalCount = 0;
 	iterator = startNode;
-	while (*iterator != nullptr && (totalCount + (*iterator)->count) <= count)
-		next();
+	bool found = false;
+	while (*iterator != nullptr && !found)
+	{
+		if (!exclusions.add((*iterator)->character))
+		{
+			if ((totalCount + (*iterator)->count) > count)
+				found = true;
+			else
+			{
+				totalCount += (*iterator)->count;
+				uniqueCount++;
+			}
+			
+		}
+		if(!found)
+			iterator = &(*iterator)->sibling;
+	}
+
 	cumulativeCount = totalCount;
 }
 
 void PPM::EncodingTraverser::CountingSiblingTraverser::next()
 {
-	totalCount += (*iterator)->count;
-	uniqueCount++;
+	if (!exclusions.add((*iterator)->character))
+	{
+		totalCount += (*iterator)->count;
+		uniqueCount++;
+	}
 	iterator = &(*iterator)->sibling;
 }
 
@@ -191,16 +211,19 @@ void PPM::EncodingTraverser::CountingSiblingTraverser::next()
 
 characterType PPM::DecodingTraverser::traverse()
 {
-	// TODO: make it better.
+	// TODO: make it better: exclusion temp.
 	byte temp = depth;
 	initialiseVine();
 	depth = temp;
+
+	exclusions.resetExclusions();
 
 	bool found = false;
 	characterType charToUpdate;
 	while (vine && !found)
 	{
-		CountingSiblingTraverser traverser(&(vine->child));
+		Exclusions exclusionsTemp = exclusions;
+		CountingSiblingTraverser traverser(&(vine->child), exclusions);
 		countType denom = traverser.totalCount + calculateEscapeCount(traverser.uniqueCount, traverser.totalCount);
 		countType charCount = decoder.getCount(denom);
 
@@ -216,6 +239,7 @@ characterType PPM::DecodingTraverser::traverse()
 		}
 		else
 		{
+			exclusions = exclusionsTemp;
 			found = true;
 			traverser.countToCount(&(vine->child), charCount);
 

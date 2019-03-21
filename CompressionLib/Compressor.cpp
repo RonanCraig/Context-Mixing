@@ -15,6 +15,8 @@ void Compressor::compress()
 	Model* model;
 	while (inputFileStream.get(c))
 	{
+		static int a = 0;
+		a++;
 		characterType character = (characterType)c;
 		model = contextMixer->getBestModel();
 		model->encode(character);
