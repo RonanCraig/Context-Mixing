@@ -13,6 +13,23 @@ namespace compression
 class PPM : public Model
 {
 
+class Node
+{
+	// Attributes
+public:
+	types::node::countType count = 0;
+	const types::node::characterType character;
+	Node* child = nullptr;
+	Node* sibling = nullptr;
+	Node* vine = nullptr;
+
+	// Methods
+public:
+	Node() : character(0) {}
+	Node(const types::byte& character) : character(character) {}
+	//bool operator=(Node& rhs) { return rhs.character == character; }
+};
+
 class Exclusions
 {
 	bool exclusions[256];
@@ -48,135 +65,56 @@ public:
 	}
 };
 
-class Node
-{
-// Attributes
-public:
-	types::node::countType count = 0;
-	const types::node::characterType character;
-	Node* child = nullptr;
-	Node* sibling = nullptr;
-	Node* vine = nullptr;
-
-// Methods
-public:
-	Node() : character(0) {}
-	Node(const types::byte& character) : character(character) {}
-	bool operator=(Node& rhs) { return rhs.character == character; }
-};
-
-class NodeTraverser
-{
-
-protected:
 class SiblingTraverser
-{
-// Attributes
-public:
-	Node** iterator;
-// Methods
-protected:
-	SiblingTraverser() {};
-public:
-	SiblingTraverser(Node* parent, Node** startNode, const types::characterType& character) { insertNode(parent, startNode, character); }
-	void insertNode(Node* parent, Node** startNode, const types::characterType& character);
-};
-
-class CountingSiblingTraverser : public SiblingTraverser
 {
 	// Attributes
 private:
 	Exclusions& exclusions;
+	const types::characterType character;
+	Node& parentNode;
 public:
+	Node** iterator;
+	bool found = false;
 	types::countType cumulativeCount = 0;
 	types::countType totalCount = 0;
 	types::countType uniqueCount = 0;
 	// Methods
 public:
-	CountingSiblingTraverser(Node** startNode, Exclusions& exclusions, const types::characterType& character) : exclusions(exclusions) { iterator = startNode; countToEnd(character); }
-	CountingSiblingTraverser(Node** startNode, Exclusions& exclusions) : exclusions(exclusions) { iterator = startNode; countToEnd(); }
+	SiblingTraverser(Node& parentNode, Exclusions& exclusions, const types::characterType character) : exclusions(exclusions), parentNode(parentNode), character(character), iterator(&parentNode.child) { traverse(); }
+	//SiblingTraverser(Node& parentNode, Exclusions& exclusions) : exclusions(exclusions), parentNode(parentNode), iterator(&parentNode.child) { countToEnd(); }
 	void countToCount(Node** startNode, const types::countType& count);
 private:
-	void countToEnd(const types::characterType& character);
-	void countToEnd();
+	void traverse();
 	void next();
+	void insertNode();
 };
 
 // Attributes
-protected:
-	Exclusions exclusions;
-	//std::list<int> exclusionsToReset;
-	types::characterType character;
-	Node* vine;
-	Node* root;
+private:
+	static const types::characterType escapeCharacter = 256;
+
 	Node* base;
+	Node root;
+	Node* currentNode;
+
+	int depthReached = 0;
+	int maxDepth;
 	int maxOrderSize;
-	types::byte depth = 0;
+	Exclusions exclusions;
+	std::pair<types::ProbRange, types::characterType>* rangesForOrders;
 
 // Methods
 public:
-	NodeTraverser(Node& root, Node& base, int order) : root(&root), base(&base), maxOrderSize(order) {}
-	virtual void traverse(const types::characterType& character);
-	
-protected:
-	void initialiseVine();
-	virtual Node* updateNode();
-	types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
-};
-
-class EncodingTraverser : public NodeTraverser
-{
-
-// Attributes
-private:
-	ArithmeticEncoder& encoder;
-	bool contextFound = false;
-
-// Methods
-public:
-	EncodingTraverser(Node& root, Node& base, ArithmeticEncoder& encoder, int order) : NodeTraverser(root, base, order), encoder(encoder) { /*exclusions = std::vector<bool>(256, false);*/ }
-	void traverse(const types::characterType& character);
-private:
-	Node* updateNode();
-	void encode(types::countType upper, types::countType lower, types::countType denom);
-};
-
-class DecodingTraverser : public NodeTraverser
-{
-// Attributes
-private:
-	ArithmeticDecoder& decoder;
-
-// Methods
-public:
-	DecodingTraverser(Node& root, Node& base, ArithmeticDecoder& decoder, int order) : NodeTraverser(root, base, order), decoder(decoder) { /*exclusions = std::vector<bool>(256, false);*/ }
-	types::characterType traverse();
-private:
-	void decode(types::countType upper, types::countType lower, types::countType denom);
-};
-
-// Attributes
-private:
-	Node& base;
-	static Node root;
-	NodeTraverser* traverser;
-	EncodingTraverser* encodingTraverser;
-	DecodingTraverser* decodingTraverser;
-
-// Methods
-public:
-	// Iterates through each context until the character has been seen before at that context or -1 context.
-	// Creates a probablilty range for the escape character if the character has not been seen before at that context.
-	// Creates a probability range for the character to encode if the character has been seen before.
-	void encode(const types::characterType& charToEncode);
-	// Similar to encode except uses code instead of character to find ranges.
-	types::characterType decode();
-	// Updates the counts for contexts.
+	//types::characterType decode(ArithmeticDecoder& decoder);
 	void update(const types::characterType& charToUpdate);
-	PPM(int order);
-	PPM(ArithmeticEncoder& encoder, int order);
-	PPM(ArithmeticDecoder& decoder, int order);
+	PPM(int order) : maxDepth(order), base(&root), currentNode(&root) { rangesForOrders = new std::pair<types::ProbRange, types::characterType>[order + 1]; }
+	types::ProbRange getProbability(int order);
 
+private:
+	void setProbabilityRange(types::countType upper, types::countType lower, types::countType denom, int currentDepth, types::characterType character);
+	Node* updateNode(Node& currentNode, int currentDepth, types::characterType character);
+	void initialiseVine();
+	types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 };
 
 }

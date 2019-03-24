@@ -17,12 +17,20 @@ protected:
 	typedef unsigned long long CODE_VALUE;
 	
 	static constexpr unsigned long MAX_DENOM = TOTAL_UNIQUE_CHARS * MAX_COUNT;
-	static const int CODE_VALUE_BITS = (std::numeric_limits<CODE_VALUE>::digits + 3) / 2;
-	static const int FREQUENCY_BITS = std::numeric_limits<CODE_VALUE>::digits - CODE_VALUE_BITS;
+	//static const int CODE_VALUE_BITS = (std::numeric_limits<CODE_VALUE>::digits + 3) / 2;
+	//static const int FREQUENCY_BITS = std::numeric_limits<CODE_VALUE>::digits - CODE_VALUE_BITS;
+
+	static const int CODE_VALUE_BITS = 32;
+	static const int FREQUENCY_BITS = 32;
+
 	static const int PRECISION = std::numeric_limits<CODE_VALUE>::digits;
+
+public:
 
 	static const CODE_VALUE MAX_CODE = (CODE_VALUE(1) << CODE_VALUE_BITS) - 1;
 	static const CODE_VALUE MAX_FREQ = (CODE_VALUE(1) << FREQUENCY_BITS) - 1;
+
+protected:
 
 	static_assert(std::numeric_limits<CODE_VALUE>::digits >= CODE_VALUE_BITS,
 		"CODE_VALUE_BITS is too large to fit in a CODE_VALUE type");

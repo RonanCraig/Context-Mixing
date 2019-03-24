@@ -8,6 +8,7 @@ using namespace types;
 
 void Decompressor::decompress()
 {
+	/*
 	characterType decodedChar = (characterType)' ';
 	basic_ofstream<byte> outputFileStream(directory + "\\result");
 	Model* model;
@@ -21,11 +22,12 @@ void Decompressor::decompress()
 			outputFileStream << (byte)decodedChar;
 			contextMixer->updateModels(decodedChar);
 		}
-	}
+	}*/
 }
 
 Decompressor::Decompressor(const string& directory) : directory(directory)
 {
+	/*
 	basic_ifstream<byte> inputFileStream(directory + "\\code", ios::binary);
 
 	ArithmeticDecoder* decoder = new ArithmeticDecoder(inputFileStream);
@@ -34,5 +36,5 @@ Decompressor::Decompressor(const string& directory) : directory(directory)
 	models->push_back(new PPM(*decoder));
 
 	contextMixer = new ContextMixer(*models);
-	decompress();
+	decompress();*/
 }

@@ -4,14 +4,15 @@ using namespace std;
 using namespace compression;
 using namespace types;
 
- Model* ContextMixer::getBestModel()
+ Model* ContextMixer::getBestModel(characterType charToUpdate)
 {
+	 updateModels(charToUpdate);
 	 return models[0];
 }
 
- void ContextMixer::updateModels(const characterType& charToUpdate)
+ void ContextMixer::updateModels(const characterType charToUpdate)
  {
-	 
+	models[0]->update(charToUpdate);
  }
 
 

@@ -12,19 +12,19 @@ void Compressor::compress()
 
 	// Main loop, compressing each character individually.
 	byte c;
-	Model* model;
 	while (inputFileStream.get(c))
-	{
-		static int a = 0;
-		a++;
-		characterType character = (characterType)c;
-		model = contextMixer->getBestModel();
-		model->encode(character);
-		contextMixer->updateModels(character);
-	}
-	model = contextMixer->getBestModel();
-	model->encode(Arithmetic::END_CHARACTER);
+		encode(c);
+	encode(Arithmetic::END_CHARACTER);
 	encoder->end();
+}
+
+void Compressor::encode(byte c)
+{
+	characterType character = (characterType)c;
+
+	Model* model = contextMixer->getBestModel(character);
+	types::ProbRange range = model->getProbability(4);
+	encoder->encode(range);
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)
@@ -33,7 +33,7 @@ Compressor::Compressor(const string& directory) : directory(directory)
 	encoder = new ArithmeticEncoder(outputFileStream);
 
 	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(*encoder));
+	models->push_back(new PPM(4));
 
 	contextMixer = new ContextMixer(*models);
 
