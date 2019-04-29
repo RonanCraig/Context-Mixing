@@ -19,30 +19,13 @@ typedef unsigned int countType;
 struct ProbRange
 {
 	// Represents lower bound and upper bound of the range as fractions, sharing a common demoninator.
-	countType upper;
-	countType lower;
-	countType denom;
+	countType upper = 1;
+	countType lower = 0;
+	countType denom = 1;
+	characterType character = 256;
 
 	ProbRange() {}
-	ProbRange(countType up, countType low, countType denom) : upper(up), lower(low), denom(denom) {}
-	
-	void reduce(ProbRange& range2)
-	{
-		countType difference = upper - lower;
-
-		countType differenceUpper = range2.upper * difference;
-		if (differenceUpper == 0)
-		{
-			int a = 5;
-		}
-		countType differenceLower = range2.lower * difference;
-		countType differenceDenom = range2.denom * denom;
-
-		denom = differenceDenom * denom;
-		lower = (differenceDenom * lower) + (denom * differenceLower);
-		upper = (differenceDenom * lower) + (denom * differenceUpper);
-
-	}
+	ProbRange(countType up, countType low, countType denom, characterType character) : upper(up), lower(low), denom(denom), character(character) {}
 };
 
 }

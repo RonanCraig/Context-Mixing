@@ -23,8 +23,7 @@ void Compressor::encode(byte c)
 	characterType character = (characterType)c;
 
 	Model* model = contextMixer->getBestModel(character);
-	types::ProbRange range = model->getProbability(4);
-	encoder->encode(range);
+	model->encode(*encoder, 4);
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)

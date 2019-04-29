@@ -30,6 +30,8 @@ public:
 	//bool operator=(Node& rhs) { return rhs.character == character; }
 };
 
+class Order
+{
 class Exclusions
 {
 	bool exclusions[256];
@@ -65,56 +67,81 @@ public:
 	}
 };
 
-class SiblingTraverser
+struct Counts
 {
-	// Attributes
-private:
-	Exclusions& exclusions;
-	const types::characterType character;
-	Node& parentNode;
-public:
-	Node** iterator;
-	bool found = false;
-	types::countType cumulativeCount = 0;
-	types::countType totalCount = 0;
+	types::countType lower = 0;
+	types::countType upper = 0;
+	types::countType denom = 0;
 	types::countType uniqueCount = 0;
-	// Methods
-public:
-	SiblingTraverser(Node& parentNode, Exclusions& exclusions, const types::characterType character) : exclusions(exclusions), parentNode(parentNode), character(character), iterator(&parentNode.child) { traverse(); }
-	//SiblingTraverser(Node& parentNode, Exclusions& exclusions) : exclusions(exclusions), parentNode(parentNode), iterator(&parentNode.child) { countToEnd(); }
-	void countToCount(Node** startNode, const types::countType& count);
-private:
-	void traverse();
-	void next();
-	void insertNode();
 };
 
 // Attributes
 private:
+	Exclusions exclusions;
+	double probability = 1;
+	types::ProbRange* ranges;
+	int order;
+	Counts counts;
+	bool found = false;
+	types::characterType character;
+
+public:
+	bool finished = false;
+
+// Methods
+public:
+	Order() {};
+	Order(int order) : order(order) { ranges = new types::ProbRange[5]; }
+	void reset(types::characterType character);
+	void update(const Node& node, const int order);
+	double getProbability() { return probability; }
+	types::ProbRange* getRanges() { return ranges; }
+};
+
+class ChildrenIterator
+{
+// Attributes
+private:
+	Node** iterator;
+	Node& parentNode;
+
+// Methods
+public:
+	ChildrenIterator(Node& parentNode) : iterator(&parentNode.child), parentNode(parentNode) {}
+	bool increment() { return *(iterator = &node()->sibling); }
+	types::characterType character() { return node()->character; }
+	types::countType count() { return node()->count; }
+	Node* node() { return *iterator; }
+	Node* insertNode(types::characterType character);
+};
+
+// Attributes
+public:
 	static const types::characterType escapeCharacter = 256;
 
-	Node* base;
+private:
+	static const int numberOfOrders = 1;
+
 	Node root;
+	Node* base;
 	Node* currentNode;
 
 	int depthReached = 0;
 	int maxDepth;
 	int maxOrderSize;
-	Exclusions exclusions;
-	std::pair<types::ProbRange, types::characterType>* rangesForOrders;
+	Order orders[numberOfOrders];
 
 // Methods
 public:
-	//types::characterType decode(ArithmeticDecoder& decoder);
 	void update(const types::characterType& charToUpdate);
-	PPM(int order) : maxDepth(order), base(&root), currentNode(&root) { rangesForOrders = new std::pair<types::ProbRange, types::characterType>[order + 1]; }
-	types::ProbRange getProbability(int order);
+	void encode(ArithmeticEncoder& encoder, int order);
+	PPM(int order) : maxDepth(order), base(&root), currentNode(&root) { orders[0] = Order(4);}
+	double getEstimatedProb(int order = 0);
+	static types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 
 private:
-	void setProbabilityRange(types::countType upper, types::countType lower, types::countType denom, int currentDepth, types::characterType character);
 	Node* updateNode(Node& currentNode, int currentDepth, types::characterType character);
 	void initialiseVine();
-	types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 };
 
 }

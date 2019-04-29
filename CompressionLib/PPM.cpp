@@ -10,11 +10,12 @@ using namespace types;
 
 void PPM::update(const characterType& charToUpdate)
 {
+	for (int i = 0; i < numberOfOrders; i++)
+		orders[i].reset(charToUpdate);
+	
 	initialiseVine();
 	int currentDepth = depthReached;
-	exclusions.resetExclusions();
 
-	setProbabilityRange((charToUpdate + 1), charToUpdate, Arithmetic::TOTAL_UNIQUE_CHARS, 0, charToUpdate);
 	base = updateNode(*currentNode, currentDepth, charToUpdate);
 	Node* previousAdded = base;
 	while (currentNode = currentNode->vine)
@@ -29,16 +30,100 @@ void PPM::update(const characterType& charToUpdate)
 
 PPM::Node* PPM::updateNode(Node& currentNode, int currentDepth, types::characterType character)
 {
-	SiblingTraverser traverser(currentNode, exclusions, character);
-	countType denom = traverser.totalCount + calculateEscapeCount(traverser.uniqueCount, traverser.totalCount);
-	Node* updatedNode = (*traverser.iterator);
+	bool shouldCount = false;
 
-	if (traverser.found) // Encode character.
-		setProbabilityRange(traverser.cumulativeCount + updatedNode->count, traverser.cumulativeCount, denom, currentDepth, character);
-	else  // Encode escape.
-		setProbabilityRange(denom, traverser.totalCount, denom, currentDepth, escapeCharacter);
+	for (int i = 0; i < numberOfOrders; i++)
+		if (!orders[i].finished)
+			shouldCount = true;
+	
+	ChildrenIterator it(currentNode);
+	Node* updatedNode = nullptr;
 
+	while (it.node() && it.character() != character)
+	{
+		if (shouldCount)
+		{
+			for (int i = 0; i < numberOfOrders; i++)
+				orders[i].update(*it.node(), currentDepth);
+		}
+		it.increment();
+	}
+	updatedNode = it.insertNode(character);
+
+	if (shouldCount)
+	{
+		while (it.increment())
+			for (int i = 0; i < numberOfOrders; i++)
+				orders[i].update(*it.node(), currentDepth);
+	}
 	return updatedNode;
+}
+
+PPM::Node* PPM::ChildrenIterator::insertNode(types::characterType character)
+{
+	if (*iterator == nullptr)
+		*iterator = new Node(character);
+
+	node()->count++;
+
+	if (node()->count == Arithmetic::MAX_COUNT)
+	{
+		Node* currentNode = parentNode.child;
+		while (currentNode)
+		{
+			currentNode->count = currentNode->count / 2;
+			if (currentNode->count == 0)
+				currentNode->count++;
+			currentNode = currentNode->sibling;
+		}
+	}
+
+	return *iterator;
+}
+
+void PPM::Order::update(const Node& node, const int order)
+{
+	if (order > this->order || finished)
+		return;
+
+	if (node.character == this->character)
+	{
+		counts.lower = counts.denom;
+		counts.upper = counts.denom + node.count;
+		found = true;
+	}
+		
+	if (exclusions.add(node.character))
+	{
+		counts.denom += node.count;
+		counts.uniqueCount++;
+	}
+
+	if (node.sibling == nullptr)
+	{
+		countType escapeCount = PPM::calculateEscapeCount(counts.uniqueCount, counts.denom);
+		if (!found)
+		{
+			counts.lower = counts.denom;
+			counts.upper = counts.denom + escapeCount;
+		}
+		else
+			finished = true;
+
+		counts.denom += escapeCount;
+		ranges[order + 1] = ProbRange(counts.upper, counts.lower, counts.denom, character);
+		probability = double(probability / counts.denom) * (counts.upper - counts.lower);
+	}
+}
+
+void PPM::Order::reset(types::characterType character)
+{
+	exclusions.resetExclusions();
+	this->character = character;
+	this->ranges[0].denom = Arithmetic::TOTAL_UNIQUE_CHARS;
+	this->ranges[0].upper = character + 1;
+	this->ranges[0].lower = character;
+	this->ranges[0].character = character;
 }
 
 void PPM::initialiseVine()
@@ -59,33 +144,23 @@ countType PPM::calculateEscapeCount(const countType& uniqueCount, const countTyp
 	return ((escapeCount < 1) ? 1 : escapeCount);
 }
 
-void PPM::setProbabilityRange(countType upper, countType lower, countType denom, int currentDepth, types::characterType character)
+double PPM::getEstimatedProb(int order)
 {
-	rangesForOrders[currentDepth].second = character;
-	ProbRange& range = rangesForOrders[currentDepth].first;
-	range.lower = lower;
-	range.upper = upper;
-	range.denom = denom;
+	return this->orders[0].getProbability();
 }
 
-types::ProbRange PPM::getProbability(int order)
+void PPM::encode(ArithmeticEncoder& encoder, int order)
 {
-	if (order > depthReached)
-		order = depthReached;
+	ProbRange* ranges = this->orders[0].getRanges();
 
-	bool found = (rangesForOrders[order].second != escapeCharacter);
-	ProbRange range = rangesForOrders[order].first;
-
-	for (int i = order - 1; i > -1 && !found; i--)
+	bool finished = false;
+	for (int i = depthReached; i > -1 && !finished; i--)
 	{
-		range.reduce(rangesForOrders[i].first);
-
-		if (rangesForOrders[i].second != escapeCharacter)
-			found = true;
-			
+		ProbRange& range = ranges[i];
+		encoder.encode(range);
+		if (range.character != escapeCharacter)
+			finished = true;
 	}
-
-	return range;
 }
 
 // Decode
@@ -133,62 +208,7 @@ characterType PPM::decode(ArithmeticDecoder& decoder)
 	return charToUpdate;
 }
 */
-// SiblingTraverser
-
-void PPM::SiblingTraverser::insertNode()
-{
-	if (*iterator == nullptr)
-		*iterator = new Node(character);
-
-	(*iterator)->count++;
-
-	if ((*iterator)->count == Arithmetic::MAX_COUNT)
-	{
-		Node* currentNode = parentNode.child;
-		while (currentNode)
-		{
-			currentNode->count = currentNode->count / 2;
-			if (currentNode->count == 0)
-				currentNode->count++;
-			currentNode = currentNode->sibling;
-		}
-	}
-}
-
-void PPM::SiblingTraverser::traverse()
-{
-	while (*iterator != nullptr && (*iterator)->character != character)
-		next();
-
-	if (*iterator)
-		found = true;
-
-	cumulativeCount = totalCount;
-	Node** nodeToBeUpdated = iterator;
-
-	while (*iterator != nullptr)
-		next();
-
-	iterator = nodeToBeUpdated;
-	insertNode();
-}
 /*
-void PPM::SiblingTraverser::traverse()
-{
-	while (*iterator != nullptr)
-		next();
-}
-*/
-void PPM::SiblingTraverser::next()
-{
-	if (!exclusions.add((*iterator)->character))
-	{
-		totalCount += (*iterator)->count;
-		uniqueCount++;
-	}
-	iterator = &(*iterator)->sibling;
-}
-
 void PPM::SiblingTraverser::countToCount(Node** startNode, const countType& count)
 {
 	totalCount = 0;
@@ -212,5 +232,5 @@ void PPM::SiblingTraverser::countToCount(Node** startNode, const countType& coun
 	}
 
 	cumulativeCount = totalCount;
-}
+}*/
 
