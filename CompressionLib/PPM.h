@@ -32,11 +32,15 @@ public:
 
 class Order
 {
+
 class Exclusions
 {
-	bool exclusions[256];
+	// A bool for every character, true meaning it has been excluded.
+	bool exclusions[256] = { false };
 	struct Node
 	{
+		// A list of nodes of excluded characters is used to quickly reset the exclusions array through iterating 
+		// through the list and accessing the array with the character, this is faster than iterating through the array.
 		Node* next;
 		types::node::characterType character;
 		Node(Node* next, types::node::characterType character) : next(next), character(character) {}
@@ -45,6 +49,7 @@ class Exclusions
 public:
 	bool add(types::node::characterType characterToExclude)
 	{
+		// Returns if it has been excluded and sets it as excluded.
 		bool* exclusionPointer = &exclusions[characterToExclude];
 		bool exclusion = *exclusionPointer;
 		if (!exclusion)
@@ -57,6 +62,7 @@ public:
 	}
 	void resetExclusions()
 	{
+		// Loops through the list of excluded nodes to access the array and reset it to false.
 		while (start != nullptr)
 		{
 			exclusions[start->character] = false;
@@ -73,6 +79,14 @@ struct Counts
 	types::countType upper = 0;
 	types::countType denom = 0;
 	types::countType uniqueCount = 0;
+
+	void reset()
+	{
+		denom = 0;
+		lower = 0;
+		upper = 0;
+		uniqueCount = 0;
+	}
 };
 
 // Attributes
@@ -94,6 +108,7 @@ public:
 	Order(int order) : order(order) { ranges = new types::ProbRange[5]; }
 	void reset(types::characterType character);
 	void update(const Node& node, const int order);
+	types::ProbRange getCharacter(Node& node, ArithmeticDecoder decoder);
 	double getProbability() { return probability; }
 	types::ProbRange* getRanges() { return ranges; }
 };
@@ -135,7 +150,8 @@ private:
 public:
 	void update(const types::characterType& charToUpdate);
 	void encode(ArithmeticEncoder& encoder, int order);
-	PPM(int order) : maxDepth(order), base(&root), currentNode(&root) { orders[0] = Order(4);}
+	types::characterType decode(ArithmeticDecoder& decoder);
+	PPM(int order) : maxDepth(order + 1), base(&root), currentNode(&root) { orders[0] = Order(order);}
 	double getEstimatedProb(int order = 0);
 	static types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 

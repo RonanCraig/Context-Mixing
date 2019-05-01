@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "ContextMixer.h"
+#include "ArithmeticDecoder.h"
 
 namespace compression
 {
@@ -11,6 +12,7 @@ class Decompressor
 private:
 	ContextMixer* contextMixer;
 	std::string directory;
+	ArithmeticDecoder* decoder;
 
 // Methods
 public:

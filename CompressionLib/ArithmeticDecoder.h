@@ -45,6 +45,7 @@ public:
 		return count;
 	}
 private:
+	//Nelson, M. (2019). Data Compression with Arithmetic Encoding. [online] Dr. Dobb's. Available at: http://www.drdobbs.com/cpp/data-compression-with-arithmetic-encodin/240169251?pgno=3&fbclid=IwAR0uL4Ni-LyzBNKZz1KkeUN_ETTtPtXUli_eCIubwA0hXsHSy5FB5cF2l0g [Accessed 30 Apr. 2019].
 	void renormalizeCode()
 	{
 		while (true)

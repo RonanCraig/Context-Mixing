@@ -18,11 +18,10 @@ void Compressor::compress()
 	encoder->end();
 }
 
-void Compressor::encode(byte c)
+void Compressor::encode(characterType c)
 {
-	characterType character = (characterType)c;
-
-	Model* model = contextMixer->getBestModel(character);
+	Model* model = contextMixer->getBestModel();
+	contextMixer->updateModels(c);
 	model->encode(*encoder, 4);
 }
 
@@ -32,7 +31,7 @@ Compressor::Compressor(const string& directory) : directory(directory)
 	encoder = new ArithmeticEncoder(outputFileStream);
 
 	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(4));
+	models->push_back(new PPM(2));
 
 	contextMixer = new ContextMixer(*models);
 

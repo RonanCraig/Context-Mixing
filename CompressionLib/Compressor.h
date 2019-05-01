@@ -18,7 +18,7 @@ public:
 
 private:
 	void compress();
-	void encode(types::byte c);
+	void encode(types::characterType c);
 };
 
 }
