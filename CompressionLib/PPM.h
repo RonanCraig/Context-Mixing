@@ -71,6 +71,17 @@ public:
 			start = next;
 		}
 	}
+
+	void resetLastExclusions(int toReset)
+	{
+		for (toReset; toReset > 0; toReset--)
+		{
+			exclusions[start->character] = false;
+			Node* next = start->next;
+			delete start;
+			start = next;
+		}
+	}
 };
 
 struct Counts
@@ -105,7 +116,7 @@ public:
 // Methods
 public:
 	Order() {};
-	Order(int order) : order(order) { ranges = new types::ProbRange[5]; }
+	Order(int order) : order(order) { ranges = new types::ProbRange[order + 2]; } // For an order n there are n + 2 ranges, 1 extra for -1, 1 extra for 0.
 	void reset(types::characterType character);
 	void update(const Node& node, const int order);
 	types::ProbRange getCharacter(Node& node, ArithmeticDecoder decoder);
@@ -149,7 +160,7 @@ private:
 // Methods
 public:
 	void update(const types::characterType& charToUpdate);
-	void encode(ArithmeticEncoder& encoder, int order);
+	void encode(ArithmeticEncoder& encoder);
 	types::characterType decode(ArithmeticDecoder& decoder);
 	PPM(int order) : maxDepth(order + 1), base(&root), currentNode(&root) { orders[0] = Order(order);}
 	double getEstimatedProb(int order = 0);

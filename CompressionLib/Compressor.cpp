@@ -22,7 +22,7 @@ void Compressor::encode(characterType c)
 {
 	Model* model = contextMixer->getBestModel();
 	contextMixer->updateModels(c);
-	model->encode(*encoder, 4);
+	model->encode(*encoder);
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)
@@ -31,9 +31,10 @@ Compressor::Compressor(const string& directory) : directory(directory)
 	encoder = new ArithmeticEncoder(outputFileStream);
 
 	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(2));
+	models->push_back(new PPM(config::order));
 
 	contextMixer = new ContextMixer(*models);
 
 	compress();
+
 }

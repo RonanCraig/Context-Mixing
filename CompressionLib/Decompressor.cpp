@@ -30,7 +30,7 @@ Decompressor::Decompressor(const string& directory) : directory(directory)
 	decoder = new ArithmeticDecoder(inputFileStream);
 
 	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(2));
+	models->push_back(new PPM(config::order));
 
 	contextMixer = new ContextMixer(*models);
 	decompress();

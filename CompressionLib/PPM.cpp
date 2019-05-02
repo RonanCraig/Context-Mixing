@@ -18,6 +18,13 @@ void PPM::update(const characterType& charToUpdate)
 	initialiseVine();
 	int currentDepth = depthReached;
 
+	ProbRange* rn1 = &(orders[0].getRanges())[0]; //order -1
+	ProbRange* r0 = &(orders[0].getRanges())[1]; //order  0
+	ProbRange* r1 = &(orders[0].getRanges())[2]; //order  1
+	ProbRange* r2 = &(orders[0].getRanges())[3]; //order  2
+	ProbRange* r3 = &(orders[0].getRanges())[3]; //order  3
+	ProbRange* r4 = &(orders[0].getRanges())[3]; //order  4
+
 	base = updateNode(*currentNode, currentDepth, charToUpdate);
 	Node* previousAdded = base;
 	// Traverses the Vine pointers till all contexts have been visited.
@@ -141,7 +148,6 @@ void PPM::Order::update(const Node& node, const int depth)
 
 types::ProbRange PPM::Order::getCharacter(Node& node, ArithmeticDecoder decoder)
 {
-	Exclusions exclusionsTemp = exclusions;
 	ChildrenIterator it(node);
 	while (it.node())
 	{
@@ -166,8 +172,8 @@ types::ProbRange PPM::Order::getCharacter(Node& node, ArithmeticDecoder decoder)
 	}
 	else
 	{
+		exclusions.resetLastExclusions(counts.uniqueCount);
 		counts.reset();
-		exclusions = exclusionsTemp;
 		ChildrenIterator it(node);
 		bool found = false;
 		while (!found)
@@ -229,7 +235,7 @@ double PPM::getEstimatedProb(int order)
 	return this->orders[0].getProbability();
 }
 
-void PPM::encode(ArithmeticEncoder& encoder, int order)
+void PPM::encode(ArithmeticEncoder& encoder)
 {
 	ProbRange* ranges = this->orders[0].getRanges();
 
@@ -250,7 +256,6 @@ void PPM::encode(ArithmeticEncoder& encoder, int order)
 // Decode
 characterType PPM::decode(ArithmeticDecoder& decoder)
 {
-	// TODO: make it better: exclusion temp.
 	byte temp = depthReached;
 	initialiseVine();
 	depthReached = temp;
