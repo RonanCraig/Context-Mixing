@@ -33,8 +33,26 @@ public:
 class Order
 {
 
+struct Counts
+{
+	types::countType lower = 0;
+	types::countType upper = 0;
+	types::countType denom = 0;
+	types::countType uniqueCount = 0;
+
+	void reset()
+	{
+		denom = 0;
+		lower = 0;
+		upper = 0;
+		uniqueCount = 0;
+	}
+};
+
+public:
 class Exclusions
 {
+public:
 	// A bool for every character, true meaning it has been excluded.
 	bool exclusions[256] = { false };
 	struct Node
@@ -46,7 +64,7 @@ class Exclusions
 		Node(Node* next, types::node::characterType character) : next(next), character(character) {}
 	};
 	Node* start = nullptr;
-public:
+
 	bool add(types::node::characterType characterToExclude)
 	{
 		// Returns if it has been excluded and sets it as excluded.
@@ -84,28 +102,14 @@ public:
 	}
 };
 
-struct Counts
-{
-	types::countType lower = 0;
-	types::countType upper = 0;
-	types::countType denom = 0;
-	types::countType uniqueCount = 0;
-
-	void reset()
-	{
-		denom = 0;
-		lower = 0;
-		upper = 0;
-		uniqueCount = 0;
-	}
-};
-
 // Attributes
-private:
-	Exclusions exclusions;
-	double probability = 1;
-	types::ProbRange* ranges;
+public:
 	int order;
+	Exclusions exclusions;
+	double bw = 0.33;
+	double probability = 1;
+private:
+	std::vector<types::ProbRange> ranges;
 	Counts counts;
 	bool found = false;
 	types::characterType character;
@@ -116,12 +120,17 @@ public:
 // Methods
 public:
 	Order() {};
-	Order(int order) : order(order) { ranges = new types::ProbRange[order + 2]; } // For an order n there are n + 2 ranges, 1 extra for -1, 1 extra for 0.
+	Order(int order) : order(order) { for (int a = 0; a < order + 2; a++) { ranges.push_back(types::ProbRange()); } } // For an order n there are n + 2 ranges, 1 extra for -1, 1 extra for 0.
 	void reset(types::characterType character);
 	void update(const Node& node, const int order);
+	void updateNegativeOrder();
 	types::ProbRange getCharacter(Node& node, ArithmeticDecoder decoder);
 	double getProbability() { return probability; }
-	types::ProbRange* getRanges() { return ranges; }
+	std::vector<types::ProbRange>& getRanges() { return ranges; }
+	~Order()
+	{
+		exclusions.resetExclusions();
+	}
 };
 
 class ChildrenIterator
@@ -146,7 +155,7 @@ public:
 	static const types::characterType escapeCharacter = 256;
 
 private:
-	static const int numberOfOrders = 1;
+	static const int numberOfOrders = 3; // TODO: make better.
 
 	Node root;
 	Node* base;
@@ -156,19 +165,23 @@ private:
 	int maxDepth;
 	int maxOrderSize;
 	Order orders[numberOfOrders];
+	Order* bestOrder = &orders[0];
 
 // Methods
 public:
-	void update(const types::characterType& charToUpdate);
+	bool update(const types::characterType& charToUpdate);
 	void encode(ArithmeticEncoder& encoder);
 	types::characterType decode(ArithmeticDecoder& decoder);
-	PPM(int order) : maxDepth(order + 1), base(&root), currentNode(&root) { orders[0] = Order(order);}
-	double getEstimatedProb(int order = 0);
+	PPM();
+	~PPM();
 	static types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 
 private:
 	Node* updateNode(Node& currentNode, int currentDepth, types::characterType character);
 	void initialiseVine();
+	void setBestOrder();
+	void updateWeights();
+	void deleteTree(Node* node);
 };
 
 }

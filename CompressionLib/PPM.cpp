@@ -1,15 +1,75 @@
 #include "PPM.h"
+#include "Config.h"
 #include <fstream>
 #include <set>
+#include <new>
 
 using namespace std;
 using namespace compression;
 using namespace types;
 
+PPM::PPM() : maxDepth(5), base(&root), currentNode(&root)
+{
+	// TODO: Make more dynamic.
+	orders[0] = Order(4); 
+	orders[1] = Order(4);
+	orders[2] = Order(8);
+}
+
+PPM::~PPM()
+{
+	deleteTree(root.child);
+}
+
+void PPM::deleteTree(Node* node)
+{
+	if (!node)
+		return;
+	if (node->child)
+		deleteTree(node->child);
+	if (node->sibling)
+		deleteTree(node->sibling);
+	delete node;
+}
+
+void PPM::setBestOrder()
+{
+	for (int i = 0; i < numberOfOrders; i++)
+		if (orders[i].bw > bestOrder->bw)
+			bestOrder = &orders[i];
+}
+
+void PPM::updateWeights()
+{
+	double betaProb = 0;
+
+	for (int i = 0; i < numberOfOrders; i++)
+		betaProb += orders[i].bw * orders[i].probability;
+
+	double sum = 0;
+
+	for (int i = 0; i < numberOfOrders; i++)
+	{
+		orders[i].bw = orders[i].bw*(orders[i].probability / betaProb);
+
+		if (orders[i].bw < 0.01)
+			orders[i].bw = 0.01;
+
+		if (orders[i].bw > 0.99)
+			orders[i].bw = 0.99;
+
+		sum += orders[i].bw;
+	}
+
+	for (int i = 0; i < numberOfOrders; i++)
+		orders[i].bw = orders[i].bw / sum;
+}
+
 // Update
 
-void PPM::update(const characterType& charToUpdate)
+bool PPM::update(const characterType& charToUpdate)
 {
+	setBestOrder();
 	// Resets the exclusion list for each order and sets the next character to be encodedd.
 	for (int i = 0; i < numberOfOrders; i++)
 		orders[i].reset(charToUpdate);
@@ -18,26 +78,45 @@ void PPM::update(const characterType& charToUpdate)
 	initialiseVine();
 	int currentDepth = depthReached;
 
-	ProbRange* rn1 = &(orders[0].getRanges())[0]; //order -1
-	ProbRange* r0 = &(orders[0].getRanges())[1]; //order  0
-	ProbRange* r1 = &(orders[0].getRanges())[2]; //order  1
-	ProbRange* r2 = &(orders[0].getRanges())[3]; //order  2
-	ProbRange* r3 = &(orders[0].getRanges())[3]; //order  3
-	ProbRange* r4 = &(orders[0].getRanges())[3]; //order  4
-
-	base = updateNode(*currentNode, currentDepth, charToUpdate);
-	Node* previousAdded = base;
-	// Traverses the Vine pointers till all contexts have been visited.
-	while (currentNode = currentNode->vine)
+	try
 	{
-		currentDepth--;
-		previousAdded->vine = updateNode(*currentNode, currentDepth, charToUpdate);
-		previousAdded = previousAdded->vine;
-	}
-	previousAdded->vine = &root;
+		base = updateNode(*currentNode, currentDepth, charToUpdate);
+		Node* previousAdded = base;
+		// Traverses the Vine pointers till all contexts have been visited.
+		while (currentNode = currentNode->vine)
+		{
+			currentDepth--;
+			previousAdded->vine = updateNode(*currentNode, currentDepth, charToUpdate);
+			previousAdded = previousAdded->vine;
+		}
+		previousAdded->vine = &root;
 
-	// Root is not visited so the count must be updated now.
-	root.count++;
+		// Root is not visited so the count must be updated now.
+		root.count++;
+
+		for (int i = 0; i < numberOfOrders; i++)
+			if (!orders[i].finished)
+				orders[i].updateNegativeOrder();
+
+		updateWeights();
+	}
+	catch (bad_alloc& badAlloc)
+	{
+		return true;
+	}
+
+	static int COUNT = 0;
+	
+	if (COUNT == config::countToReset)
+	{
+		COUNT = 0;
+		return true;
+	}
+	else
+		COUNT++;
+		
+
+	return false;
 }
 
 PPM::Node* PPM::updateNode(Node& currentNode, int currentDepth, types::characterType character)
@@ -129,21 +208,71 @@ void PPM::Order::update(const Node& node, const int depth)
 
 	if (node.sibling == nullptr)
 	{
+		ProbRange range;
 		countType escapeCount = PPM::calculateEscapeCount(counts.uniqueCount, counts.denom);
+		range.denom = counts.denom + escapeCount;
+
 		if (!found)
 		{
-			counts.lower = counts.denom;
-			counts.upper = counts.denom + escapeCount;
-			character = escapeCharacter;
+			// Escape will be encoded.
+			range.lower = counts.denom;
+			range.upper = range.lower + escapeCount;
+			range.character = escapeCharacter;
 		}
 		else
+		{
+			// Found character will be encoded.
 			finished = true;
+			range.lower = counts.lower;
+			range.upper = counts.upper;
+			range.character = this->character;
+		}
 
-		counts.denom += escapeCount;
-		ranges[depth] = ProbRange(counts.upper, counts.lower, counts.denom, character);
-		probability = double(probability / counts.denom) * (counts.upper - counts.lower);
+		ranges[depth] = range;
+		probability = double(probability / range.denom) * (range.upper - range.lower);
 		counts.reset();
 	}
+}
+
+void PPM::Order::updateNegativeOrder()
+{
+	/*
+	this->ranges[0].character = character;
+	int denom = Arithmetic::TOTAL_UNIQUE_CHARS;
+	int upper = character + 1;
+	int lower = character;
+	
+	Exclusions::Node* start = exclusions.start;
+	while (start != nullptr)
+	{
+		if (exclusions.exclusions[start->character])
+		{
+			denom--;
+			if (start->character < character)
+			{
+				upper--;
+				lower--;
+			}
+		}
+		start = start->next;
+	}
+	
+	probability = double(probability / denom) * (upper - lower);
+
+	this->ranges[0].denom = denom;
+	this->ranges[0].upper = upper;
+	this->ranges[0].lower = lower;
+	*/
+	int denom = Arithmetic::TOTAL_UNIQUE_CHARS;
+	int upper = character + 1;
+	int lower = character;
+
+	this->ranges[0].character = character;
+	this->ranges[0].denom = denom;
+	this->ranges[0].upper = upper;
+	this->ranges[0].lower = lower;
+
+	probability = double(probability / denom) * (upper - lower);
 }
 
 types::ProbRange PPM::Order::getCharacter(Node& node, ArithmeticDecoder decoder)
@@ -206,10 +335,14 @@ void PPM::Order::reset(types::characterType character)
 	found = false;
 	probability = 1;
 	this->character = character;
-	this->ranges[0].denom = Arithmetic::TOTAL_UNIQUE_CHARS;
-	this->ranges[0].upper = character + 1;
-	this->ranges[0].lower = character;
-	this->ranges[0].character = character;
+
+	for (int i = 0; i < this->order + 2; i++)
+	{
+		ranges[i].denom = 1;
+		ranges[i].lower = 0;
+		ranges[i].upper = 1;
+		ranges[i].character = escapeCharacter;
+	}
 }
 
 void PPM::initialiseVine()
@@ -230,26 +363,19 @@ countType PPM::calculateEscapeCount(const countType& uniqueCount, const countTyp
 	return ((escapeCount < 1) ? 1 : escapeCount);
 }
 
-double PPM::getEstimatedProb(int order)
-{
-	return this->orders[0].getProbability();
-}
-
 void PPM::encode(ArithmeticEncoder& encoder)
 {
-	ProbRange* ranges = this->orders[0].getRanges();
+	vector<types::ProbRange>& ranges = bestOrder->getRanges();
+
+	int maxRangeOrderPos = (depthReached <= bestOrder->order + 1) ? depthReached : bestOrder->order + 1; // Trie depth might not of reached the order depth yet. When it has just begun.
 
 	bool finished = false;
-	for (int i = depthReached; i > -1 && !finished; i--)
+	for (int i = maxRangeOrderPos; i > -1 && !finished; i--)
 	{
 		ProbRange& range = ranges[i];
 		encoder.encode(range);
 		if (range.character != escapeCharacter)
 			finished = true;
-		range.denom = 1;
-		range.lower = 0;
-		range.upper = 1;
-		range.character = escapeCharacter;
 	}
 }
 
@@ -258,7 +384,16 @@ characterType PPM::decode(ArithmeticDecoder& decoder)
 {
 	byte temp = depthReached;
 	initialiseVine();
+	int currentDepth = depthReached;
 	depthReached = temp;
+
+	setBestOrder();
+	
+	while (currentDepth > bestOrder->order + 1)
+	{
+		currentNode = currentNode->vine;
+		currentDepth--;
+	}
 
 	for (int i = 0; i < numberOfOrders; i++)
 		orders[i].reset(' ');
@@ -267,7 +402,7 @@ characterType PPM::decode(ArithmeticDecoder& decoder)
 	characterType charToUpdate;
 	while (!found)
 	{
-		types::ProbRange range = orders[0].getCharacter(*currentNode, decoder);
+		types::ProbRange range = bestOrder->getCharacter(*currentNode, decoder);
 		if (range.character != escapeCharacter)
 		{
 			found = true;
@@ -279,8 +414,30 @@ characterType PPM::decode(ArithmeticDecoder& decoder)
 
 		if (currentNode == nullptr && !found)
 		{
+			/*
 			range.denom = Arithmetic::TOTAL_UNIQUE_CHARS;
-			range.lower = decoder.getCount(Arithmetic::TOTAL_UNIQUE_CHARS);
+			Order::Exclusions::Node* start = order.exclusions.start;
+			while (start != nullptr)
+			{
+				if (order.exclusions.exclusions[start->character])
+					range.denom--;
+				start = start->next;
+			}
+			Order::Exclusions::Node* start = order.exclusions.start;
+			while (start != nullptr)
+			{
+				if (order.exclusions.exclusions[start->character])
+					range.denom--;
+				start = start->next;
+			}
+			
+			range.lower = decoder.getCount(range.denom);
+			range.upper = range.lower + 1;
+			decoder.decode(range);
+			found = true;
+			*/
+			range.denom = Arithmetic::TOTAL_UNIQUE_CHARS;
+			range.lower = decoder.getCount(range.denom);
 			range.upper = range.lower + 1;
 			decoder.decode(range);
 			found = true;

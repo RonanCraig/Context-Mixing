@@ -2,6 +2,7 @@
 #include <vector>
 #include "Model.h"
 #include "CompressionTypes.h"
+#include "PPM.h"
 
 namespace compression
 {
@@ -10,13 +11,14 @@ class ContextMixer
 {
 // Attributes
 private:
-	std::vector<Model*>& models;
+	Model** models;
 
 // Methods
 public:
-	Model* getBestModel();
-	ContextMixer(std::vector<Model*>& models) : models(models) {}
-	void updateModels(const types::characterType charToUpdate);
+	Model& getBestModel();
+	ContextMixer() { models = new Model*[1]; models[0] = new PPM(); }
+	bool updateModels(const types::characterType charToUpdate);
+	void resetModels();
 };
 
 }

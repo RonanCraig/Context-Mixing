@@ -4,16 +4,20 @@ using namespace std;
 using namespace compression;
 using namespace types;
 
- Model* ContextMixer::getBestModel()
+ Model& ContextMixer::getBestModel()
 {
-	 Model* model = models[0];
-	 return models[0];
+	 return *(models[0]);
 }
 
- void ContextMixer::updateModels(const characterType charToUpdate)
+ bool ContextMixer::updateModels(const characterType charToUpdate)
  {
-	models[0]->update(charToUpdate);
-	//double prob = model->getEstimatedProb(4);
+	return models[0]->update(charToUpdate);
+ }
+
+ void ContextMixer::resetModels()
+ {
+	 delete models[0];
+	 models[0] = new PPM();
  }
 
 

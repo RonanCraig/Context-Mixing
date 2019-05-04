@@ -9,18 +9,44 @@ using namespace types;
 void Decompressor::decompress()
 {
 	characterType decodedChar = (characterType)' ';
+	byte cBehind;
 	basic_ofstream<byte> outputFileStream(directory + "\\result");
+	int charactersIn = 0;
 	
 	while (decodedChar != Arithmetic::END_CHARACTER)
 	{
-		Model* model;
-		model = contextMixer->getBestModel();
-		decodedChar = model->decode(*decoder);
+		Model& model = contextMixer->getBestModel();
+		decodedChar = model.decode(*decoder);
 		if (decodedChar != Arithmetic::END_CHARACTER)
 		{
 			outputFileStream << (byte)decodedChar;
-			contextMixer->updateModels(decodedChar);
-		}
+			if(contextMixer->updateModels(decodedChar))
+			{
+				// Get fielstream to position where it will start rebuilding trie.
+				outputFileStream.close();
+				basic_ifstream<byte> inputFileStreamTailing(directory + "\\result");
+				for (int a = 0; a <= charactersIn - config::charactersToTrail; a++)
+					inputFileStreamTailing.get(cBehind);
+
+				// Rebuild trie.
+				contextMixer->resetModels();
+				int charactersBehind = config::charactersToTrail;
+				while (charactersBehind > 0)
+				{
+					model = contextMixer->getBestModel();
+					contextMixer->updateModels(cBehind);
+					inputFileStreamTailing.get(cBehind);
+					charactersBehind--;
+				}
+				Model& model = contextMixer->getBestModel();
+				contextMixer->updateModels(cBehind);
+
+				// Get writing filestream back to it's previous location.
+				inputFileStreamTailing.close();
+				outputFileStream.open(directory + "\\result", ios_base::app);
+			}
+			charactersIn++;
+		}	
 	}
 }
 
@@ -29,9 +55,6 @@ Decompressor::Decompressor(const string& directory) : directory(directory)
 	basic_ifstream<byte> inputFileStream(directory + "\\code", ios::binary);
 	decoder = new ArithmeticDecoder(inputFileStream);
 
-	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(config::order));
-
-	contextMixer = new ContextMixer(*models);
+	contextMixer = new ContextMixer();
 	decompress();
 }

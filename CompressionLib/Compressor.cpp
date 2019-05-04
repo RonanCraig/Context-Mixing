@@ -1,6 +1,4 @@
 #include "Compressor.h"
-#include "Config.h"
-#include "PPM.h"
 
 using namespace std;
 using namespace compression;
@@ -9,20 +7,45 @@ using namespace types;
 void Compressor::compress()
 {
 	basic_ifstream<byte> inputFileStream(directory + "\\" + config::inputfile);
-
+	basic_ifstream<byte> inputFileStreamTailing(directory + "\\" + config::inputfile);
+	int charactersBehind = 0;
 	// Main loop, compressing each character individually.
 	byte c;
+	byte cBehind;
 	while (inputFileStream.get(c))
-		encode(c);
+	{
+		if (charactersBehind < config::charactersToTrail) // Trails 10000000 characters behind.
+			charactersBehind++;
+		else
+			inputFileStreamTailing.get(cBehind);
+
+		if (encode(c)) // True if models need to be reset.
+		{
+			contextMixer->resetModels();
+			while (charactersBehind > 0)
+			{
+				contextMixer->updateModels(cBehind);
+				inputFileStreamTailing.get(cBehind);
+				charactersBehind--;
+			}
+			contextMixer->updateModels(cBehind);
+			charactersBehind = 0;
+		}
+	}
 	encode(Arithmetic::END_CHARACTER);
 	encoder->end();
 }
 
-void Compressor::encode(characterType c)
+bool Compressor::encode(characterType c)
 {
-	Model* model = contextMixer->getBestModel();
-	contextMixer->updateModels(c);
-	model->encode(*encoder);
+	Model& model = contextMixer->getBestModel();
+	if (contextMixer->updateModels(c))
+	{
+		model.encode(*encoder);
+		return true;
+	}
+	model.encode(*encoder);
+	return false;
 }
 
 Compressor::Compressor(const string& directory) : directory(directory)
@@ -30,11 +53,6 @@ Compressor::Compressor(const string& directory) : directory(directory)
 	basic_ofstream<byte> outputFileStream(directory + "\\code", ios::binary);
 	encoder = new ArithmeticEncoder(outputFileStream);
 
-	vector<Model*>* models = new vector<Model*>;
-	models->push_back(new PPM(config::order));
-
-	contextMixer = new ContextMixer(*models);
-
+	contextMixer = new ContextMixer();
 	compress();
-
 }

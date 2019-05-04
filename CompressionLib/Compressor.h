@@ -2,6 +2,7 @@
 #include <string>
 #include "ContextMixer.h"
 #include "ArithmeticEncoder.h"
+#include "Config.h"
 
 namespace compression
 {
@@ -18,7 +19,7 @@ public:
 
 private:
 	void compress();
-	void encode(types::characterType c);
+	bool encode(types::characterType c);
 };
 
 }

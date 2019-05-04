@@ -3,7 +3,8 @@
 
 namespace config
 {
-	const std::string inputfile = "50k";
-	const int order = 4;
+	const std::string inputfile = "1k";
+	const int charactersToTrail = 500;
+	const int countToReset = 9999999999999999999;
 }
 
