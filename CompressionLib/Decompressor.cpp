@@ -50,11 +50,11 @@ void Decompressor::decompress()
 	}
 }
 
-Decompressor::Decompressor(const string& directory) : directory(directory)
+Decompressor::Decompressor(const string& directory, const std::string& inputFileName, vector<int> ordersToRun) : directory(directory)
 {
-	basic_ifstream<byte> inputFileStream(directory + "\\code", ios::binary);
+	basic_ifstream<byte> inputFileStream(directory + "\\" + inputFileName, ios::binary);
 	decoder = new ArithmeticDecoder(inputFileStream);
 
-	contextMixer = new ContextMixer();
+	contextMixer = new ContextMixer(ordersToRun);
 	decompress();
 }

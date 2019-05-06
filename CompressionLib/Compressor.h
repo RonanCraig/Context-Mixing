@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include "ContextMixer.h"
 #include "ArithmeticEncoder.h"
 #include "Config.h"
@@ -15,7 +16,8 @@ private:
 	ArithmeticEncoder* encoder;
 
 public:
-	Compressor(const std::string& directory);
+	Compressor(const std::string& directory, const std::string& resultFileName, std::vector<int> ordersToRun);
+	~Compressor() { delete encoder; delete contextMixer; }
 
 private:
 	void compress();

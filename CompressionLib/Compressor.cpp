@@ -6,31 +6,37 @@ using namespace types;
 
 void Compressor::compress()
 {
-	basic_ifstream<byte> inputFileStream(directory + "\\" + config::inputfile);
-	basic_ifstream<byte> inputFileStreamTailing(directory + "\\" + config::inputfile);
-	int charactersBehind = 0;
+	basic_ifstream<byte> inputFileStream(directory + "\\" + config::inputfile, ios::binary);
+	int charactersIn = 0;
 	// Main loop, compressing each character individually.
 	byte c;
-	byte cBehind;
+
 	while (inputFileStream.get(c))
 	{
-		if (charactersBehind < config::charactersToTrail) // Trails 10000000 characters behind.
-			charactersBehind++;
-		else
-			inputFileStreamTailing.get(cBehind);
-
 		if (encode(c)) // True if models need to be reset.
 		{
 			contextMixer->resetModels();
-			while (charactersBehind > 0)
+			basic_ifstream<byte> inputFileStreamTailing(directory + "\\" + config::inputfile);
+			byte cBehind;
+			int charactersToSkip = charactersIn - config::charactersToTrail;//1 * (charactersIn / 3);
+			int charactersToEncode = charactersIn - charactersToSkip;
+
+			while (charactersToSkip >= 0)
+			{
+				inputFileStreamTailing.get(cBehind);
+				charactersToSkip--;
+			}
+			while (charactersToEncode > 0)
 			{
 				contextMixer->updateModels(cBehind);
 				inputFileStreamTailing.get(cBehind);
-				charactersBehind--;
+				charactersToEncode--;
 			}
 			contextMixer->updateModels(cBehind);
-			charactersBehind = 0;
+			Model& model = contextMixer->getBestModel();
+			model.encode(*encoder);
 		}
+		charactersIn++;
 	}
 	encode(Arithmetic::END_CHARACTER);
 	encoder->end();
@@ -39,20 +45,18 @@ void Compressor::compress()
 bool Compressor::encode(characterType c)
 {
 	Model& model = contextMixer->getBestModel();
-	if (contextMixer->updateModels(c))
-	{
-		model.encode(*encoder);
+	if (contextMixer->updateModels(c))	
 		return true;
-	}
+
 	model.encode(*encoder);
 	return false;
 }
 
-Compressor::Compressor(const string& directory) : directory(directory)
+Compressor::Compressor(const string& directory, const std::string& resultFileName, vector<int> ordersToRun) : directory(directory)
 {
-	basic_ofstream<byte> outputFileStream(directory + "\\code", ios::binary);
+	basic_ofstream<byte> outputFileStream(directory + "\\" + resultFileName, ios::binary);
 	encoder = new ArithmeticEncoder(outputFileStream);
 
-	contextMixer = new ContextMixer();
+	contextMixer = new ContextMixer(ordersToRun);
 	compress();
 }

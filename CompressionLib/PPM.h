@@ -155,7 +155,7 @@ public:
 	static const types::characterType escapeCharacter = 256;
 
 private:
-	static const int numberOfOrders = 3; // TODO: make better.
+	//static const int numberOfOrders = 1; // TODO: make better.
 
 	Node root;
 	Node* base;
@@ -164,15 +164,18 @@ private:
 	int depthReached = 0;
 	int maxDepth;
 	int maxOrderSize;
-	Order orders[numberOfOrders];
-	Order* bestOrder = &orders[0];
+	int numberOfOrders;
+	//std::vector<Order> orders;
+	//Order orders[numberOfOrders];
+	Order* orders;
+	Order* bestOrder;
 
 // Methods
 public:
 	bool update(const types::characterType& charToUpdate);
 	void encode(ArithmeticEncoder& encoder);
 	types::characterType decode(ArithmeticDecoder& decoder);
-	PPM();
+	PPM(std::vector<int> ordersToRun);
 	~PPM();
 	static types::countType calculateEscapeCount(const types::countType& uniqueCount, const types::countType& totalCount);
 

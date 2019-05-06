@@ -17,7 +17,7 @@ using namespace types;
  void ContextMixer::resetModels()
  {
 	 delete models[0];
-	 models[0] = new PPM();
+	 models[0] = new PPM(ordersToRun);
  }
 
 

@@ -8,16 +8,27 @@ using namespace std;
 using namespace compression;
 using namespace types;
 
-PPM::PPM() : maxDepth(5), base(&root), currentNode(&root)
+PPM::PPM(std::vector<int> ordersToRun) : base(&root), currentNode(&root)
 {
-	// TODO: Make more dynamic.
-	orders[0] = Order(4); 
-	orders[1] = Order(4);
-	orders[2] = Order(8);
+	int largestOrder = 0;
+	numberOfOrders = ordersToRun.size();
+	orders = new Order[numberOfOrders];
+	auto it = ordersToRun.begin();
+
+	for (int i = 0; i < numberOfOrders; i++)
+	{
+		orders[i] = Order(*it);
+		if (*it > largestOrder)
+			largestOrder = *it;
+		it++;
+	}
+	maxDepth = largestOrder + 1;
+	bestOrder = &orders[0];
 }
 
 PPM::~PPM()
 {
+	delete[] orders;
 	deleteTree(root.child);
 }
 
@@ -52,11 +63,11 @@ void PPM::updateWeights()
 	{
 		orders[i].bw = orders[i].bw*(orders[i].probability / betaProb);
 
-		if (orders[i].bw < 0.01)
-			orders[i].bw = 0.01;
+		if (orders[i].bw < 0.25)
+			orders[i].bw = 0.25;
 
-		if (orders[i].bw > 0.99)
-			orders[i].bw = 0.99;
+		if (orders[i].bw > 0.75)
+			orders[i].bw = 0.75;
 
 		sum += orders[i].bw;
 	}
@@ -105,6 +116,7 @@ bool PPM::update(const characterType& charToUpdate)
 		return true;
 	}
 
+	/*
 	static int COUNT = 0;
 	
 	if (COUNT == config::countToReset)
@@ -114,7 +126,7 @@ bool PPM::update(const characterType& charToUpdate)
 	}
 	else
 		COUNT++;
-		
+	*/
 
 	return false;
 }

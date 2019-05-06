@@ -16,7 +16,7 @@ private:
 
 // Methods
 public:
-	Decompressor(const std::string& directory);
+	Decompressor(const std::string& directory, const std::string& inputFileName, std::vector<int> ordersToRun);
 
 private:
 	void decompress();
